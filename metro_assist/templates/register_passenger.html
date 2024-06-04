@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Регистрация пассажира</h1>
+<form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+        <label for="name">ФИО пассажира</label>
+        <input type="text" class="form-control" id="name" name="name" required>
+    </div>
+    <div class="form-group">
+        <label for="contact_phone">Контактные телефоны</label>
+        <input type="text" class="form-control" id="contact_phone" name="contact_phone" required>
+    </div>
+    <div class="form-group">
+        <label for="gender">Пол пассажира</label>
+        <select class="form-control" id="gender" name="gender">
+            <option value="Мужской">Мужской</option>
+            <option value="Женский">Женский</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="category">Категория пассажира</label>
+        <select class="form-control" id="category" name="category" required>
+            {% for value, display in form.fields.category.choices %}
+            <option value="{{ value }}">{{ display }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="additional_info">Дополнительная информация</label>
+        <textarea class="form-control" id="additional_info" name="additional_info"></textarea>
+    </div>
+    <div class="form-group">
+        <label for="has_eks">Наличие ЭКС</label>
+        <select class="form-control" id="has_eks" name="has_eks">
+            <option value="False">Нет</option>
+            <option value="True">Да</option>
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Сохранить</button>
+</form>
+{% endblock %}

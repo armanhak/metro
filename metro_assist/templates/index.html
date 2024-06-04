@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Список заявок</h1>
+{% if requests %}
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Пассажир</th>
+            <th>Станция отправления</th>
+            <th>Станция прибытия</th>
+            <th>Дата</th>
+            <th>Статус</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for request in requests %}
+        <tr>
+            <td>{{ request.id }}</td>
+            <td>{{ request.passenger.name }}</td>
+            <td>{{ request.departure_station }}</td>
+            <td>{{ request.arrival_station }}</td>
+            <td>{{ request.request_date }}</td>
+            <td>{{ request.status }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>Нет доступных заявок.</p>
+{% endif %}
+{% endblock %}

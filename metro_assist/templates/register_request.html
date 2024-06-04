@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Регистрация заявки</h1>
+<form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+        <label for="passenger">Пассажир</label>
+        <select class="form-control" id="passenger" name="passenger">
+            {% if passengers %}
+            {% for passenger in passengers %}
+            <option value="{{ passenger.id }}">{{ passenger.name }}</option>
+            {% endfor %}
+            {% else %}
+            <option disabled>Нет зарегистрированных пассажиров</option>
+            {% endif %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="departure_station">Станция отправления</label>
+        <input type="text" class="form-control" id="departure_station" name="departure_station" required>
+    </div>
+    <div class="form-group">
+        <label for="arrival_station">Станция прибытия</label>
+        <input type="text" class="form-control" id="arrival_station" name="arrival_station" required>
+    </div>
+    <div class="form-group">
+        <label for="meeting_point">Место встречи</label>
+        <input type="text" class="form-control" id="meeting_point" name="meeting_point">
+    </div>
+    <div class="form-group">
+        <label for="arrival_point">Место прибытия</label>
+        <input type="text" class="form-control" id="arrival_point" name="arrival_point">
+    </div>
+    <div class="form-group">
+        <label for="request_date">Дата заявки</label>
+        <input type="datetime-local" class="form-control" id="request_date" name="request_date" required>
+    </div>
+    <div class="form-group">
+        <label for="method_of_request">Метод приема заявки</label>
+        <input type="text" class="form-control" id="method_of_request" name="method_of_request">
+    </div>
+    <div class="form-group">
+        <label for="number_of_passengers">Количество пассажиров</label>
+        <input type="number" class="form-control" id="number_of_passengers" name="number_of_passengers">
+    </div>
+    <div class="form-group">
+        <label for="request_category">Категория заявки</label>
+        <input type="text" class="form-control" id="request_category" name="request_category">
+    </div>
+    <div class="form-group">
+        <label for="number_of_employees">Количество сотрудников</label>
+        <input type="number" class="form-control" id="number_of_employees" name="number_of_employees">
+    </div>
+    <div class="form-group">
+        <label for="status">Статус заявки</label>
+        <select class="form-control" id="status" name="status">
+            <option value="Не подтверждена">Не подтверждена</option>
+            <option value="В рассмотрении">В рассмотрении</option>
+            <option value="Принята">Принята</option>
+            <option value="Инспектор выехал">Инспектор выехал</option>
+            <option value="Инспектор на месте">Инспектор на месте</option>
+            <option value="Поездка">Поездка</option>
+            <option value="Заявка закончена">Заявка закончена</option>
+            <option value="Пассажир опаздывает">Пассажир опаздывает</option>
+            <option value="Инспектор опаздывает">Инспектор опаздывает</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="additional_info">Дополнительная информация</label>
+        <textarea class="form-control" id="additional_info" name="additional_info"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Сохранить</button>
+</form>
+{% endblock %}
