@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Passenger, Request, Employee, WorkSchedule
+from .models import Passenger, Request, Employee#, WorkSchedule
 
 class PassengerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -16,7 +16,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
         model = Employee
         fields = '__all__'
 
-class WorkScheduleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = WorkSchedule
-        fields = '__all__'
+# class WorkScheduleSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = WorkSchedule
+#         fields = '__all__'

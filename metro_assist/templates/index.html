@@ -18,10 +18,10 @@
         {% for request in requests %}
         <tr>
             <td>{{ request.id }}</td>
-            <td>{{ request.passenger.name }}</td>
-            <td>{{ request.departure_station }}</td>
-            <td>{{ request.arrival_station }}</td>
-            <td>{{ request.request_date }}</td>
+            <td>{{ request.id_pas.name }}</td>
+            <td>{{ request.id_st1.name_station }}</td>
+            <td>{{ request.id_st2.name_station }}</td>
+            <td>{{ request.datetime }}</td>
             <td>{{ request.status }}</td>
         </tr>
         {% endfor %}

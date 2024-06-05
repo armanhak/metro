@@ -1,8 +1,8 @@
 # core/views.py
 from django.shortcuts import render, redirect
 from rest_framework import viewsets
-from .models import Passenger, Request, Employee, WorkSchedule
-from .serializers import PassengerSerializer, RequestSerializer, EmployeeSerializer, WorkScheduleSerializer
+from .models import Passenger, Request, Employee #WorkSchedule
+from .serializers import PassengerSerializer, RequestSerializer, EmployeeSerializer#, WorkScheduleSerializer
 from .forms import PassengerForm, RequestForm, EmployeeForm
 
 # ViewSet'ы для API
@@ -18,9 +18,9 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
 
-class WorkScheduleViewSet(viewsets.ModelViewSet):
-    queryset = WorkSchedule.objects.all()
-    serializer_class = WorkScheduleSerializer
+# class WorkScheduleViewSet(viewsets.ModelViewSet):
+#     queryset = WorkSchedule.objects.all()
+#     serializer_class = WorkScheduleSerializer
 
 # Обработчики для регистрации пассажира, заявки и сотрудника
 def register_passenger(request):
