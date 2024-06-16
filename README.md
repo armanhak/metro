@@ -1,3 +1,4 @@
+# Инструкция
 Для запуска web сайта необходимо клонировать репозиторию и выполнить команду
 ```sh
 docker-compose -f "docker-compose.local.yml" up --build
