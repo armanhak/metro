@@ -345,8 +345,8 @@ if __name__ == "__main__":
     workersm, tasksm = load_workers_tasks(tasks_file=tasks_file, 
                                         workers_file=workers_file, 
                                         gender='M',
-                                        wcount=40, # all male employers
-                                        tcount=80# all male requests
+                                        wcount=200, # all male employers
+                                        tcount=600# all male requests
                                         )
     workersf, tasksf = load_workers_tasks(tasks_file=tasks_file, 
                                         workers_file=workers_file, 
