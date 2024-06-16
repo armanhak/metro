@@ -20,6 +20,6 @@ venv/scripts/activate
 python research/vrtpwt.py
 ```
 После выполнения создается файл "Расписание.xlsx", <br>
-В файле <b>research/vrtpwt.py</b> берутся составляется 
+В файле <b>research/vrtpwt.py</b> задаются пути к файлам из <b>metro_assist/base_data</b>. Если нужно запустить на новых данных, то нужно поменять пути.
 
  
