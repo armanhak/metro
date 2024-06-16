@@ -19,7 +19,7 @@ pip install -m metro_assist/requirements.txt
 venv/scripts/activate
 python research/vrtpwt.py
 ```
-После выполнения создается файл "Расписание.xlsx", <br>
+После выполнения создается файл <b>"Расписание.xlsx"</b>, <br>
 В файле <b>research/vrtpwt.py</b> задаются пути к файлам из <b>metro_assist/base_data</b>. Если нужно запустить на новых данных, то нужно поменять пути.
 
  
