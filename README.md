@@ -4,4 +4,5 @@
 docker-compose -f "docker-compose.local.yml" up --build
 ```
 Программа автоматический создаст необходимые данные в postgresql. Также добавит тестовые данные в бд из metro_assist/base_data
+## Распределение задач
  
