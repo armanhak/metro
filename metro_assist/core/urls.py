@@ -3,7 +3,8 @@ from rest_framework.routers import DefaultRouter
 from .views import (PassengerViewSet, RequestViewSet,
                     EmployeeViewSet,# WorkScheduleViewSet,
                     register_passenger, register_request,
-                    register_employee, index)
+                    request_distribution,
+                    register_employee, index, calculate_time_over)
 
 router = DefaultRouter()
 router.register(r'passengers', PassengerViewSet)
@@ -16,6 +17,10 @@ urlpatterns = [
     path('', index, name='index'),
     path('register_passenger/', register_passenger, name='register_passenger'),
     path('register_request/', register_request, name='register_request'),
+    path('request_distribution/', request_distribution, name='request_distribution'),
+
+    path('calculate_time_over/', calculate_time_over, name='calculate_time_over'),
+
     path('register_employee/', register_employee, name='register_employee'),
     path('api/', include(router.urls)),
 ]

@@ -13,6 +13,10 @@
         <input type="text" class="form-control" id="contact_phone" name="contact_phone" required>
     </div>
     <div class="form-group">
+        <label for="additional_phone_info">Дополнительная информация для связи</label>
+        <textarea class="form-control" id="additional_phone_info" name="additional_phone_info"></textarea>
+    </div>
+    <div class="form-group">
         <label for="gender">Пол пассажира</label>
         <select class="form-control" id="gender" name="gender">
             <option value="Мужской">Мужской</option>
@@ -20,10 +24,10 @@
         </select>
     </div>
     <div class="form-group">
-        <label for="category">Категория пассажира</label>
+        <label for="category">Категория</label>
         <select class="form-control" id="category" name="category" required>
-            {% for value, display in form.fields.category.choices %}
-            <option value="{{ value }}">{{ display }}</option>
+            {% for category in categories %}
+            <option value="{{ category.id }}">{{ category.description }}</option>
             {% endfor %}
         </select>
     </div>

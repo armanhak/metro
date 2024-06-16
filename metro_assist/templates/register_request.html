@@ -6,24 +6,27 @@
     {% csrf_token %}
     <div class="form-group">
         <label for="passenger">Пассажир</label>
-        <select class="form-control" id="passenger" name="passenger">
-            {% if passengers %}
-            {% for passenger in passengers %}
-            <option value="{{ passenger.id }}">{{ passenger.name }}</option>
-            {% endfor %}
-            {% else %}
-            <option disabled>Нет зарегистрированных пассажиров</option>
-            {% endif %}
-        </select>
+        <input type="text" class="form-control" id="passenger" name="passenger_name" required>
+        <input type="hidden" id="passenger_id" name="passenger_id">
     </div>
     <div class="form-group">
         <label for="departure_station">Станция отправления</label>
-        <input type="text" class="form-control" id="departure_station" name="departure_station" required>
+        <input type="text" class="form-control" id="departure_station" name="departure_station_name" required>
+        <input type="hidden" id="departure_station_id" name="departure_station_id">
     </div>
     <div class="form-group">
         <label for="arrival_station">Станция прибытия</label>
-        <input type="text" class="form-control" id="arrival_station" name="arrival_station" required>
+        <input type="text" class="form-control" id="arrival_station" name="arrival_station_name" required>
+        <input type="hidden" id="arrival_station_id" name="arrival_station_id">
     </div>
+    <div class="form-group">
+        <label for="time_over">Время поездки</label>
+        <input type="time" class="form-control" id="time_over" name="time_over" step="1">
+    </div>
+    <button type="button" class="btn btn-info" data-toggle="modal" data-target="#routeInfoModal">
+        Показать информацию о маршруте
+    </button>
+
     <div class="form-group">
         <label for="meeting_point">Место встречи</label>
         <input type="text" class="form-control" id="meeting_point" name="meeting_point">
@@ -33,43 +36,218 @@
         <input type="text" class="form-control" id="arrival_point" name="arrival_point">
     </div>
     <div class="form-group">
-        <label for="request_date">Дата заявки</label>
-        <input type="datetime-local" class="form-control" id="request_date" name="request_date" required>
+        <label for="datetime">Дата и время выполнения</label>
+        <input type="datetime-local" class="form-control" id="datetime" name="datetime" required>
     </div>
     <div class="form-group">
         <label for="method_of_request">Метод приема заявки</label>
-        <input type="text" class="form-control" id="method_of_request" name="method_of_request">
+        <select class="form-control" id="method_of_request" name="method_of_request">
+            {% for method in request_methods %}
+            <option value="{{ method.id }}">{{ method.method }}</option>
+            {% endfor %}
+        </select>
     </div>
-    <div class="form-group">
-        <label for="number_of_passengers">Количество пассажиров</label>
-        <input type="number" class="form-control" id="number_of_passengers" name="number_of_passengers">
-    </div>
+
     <div class="form-group">
         <label for="request_category">Категория заявки</label>
-        <input type="text" class="form-control" id="request_category" name="request_category">
+        <select class="form-control" id="request_category" name="request_category">
+            {% for category in passenger_categories %}
+            <option value="{{ category.id }}">{{category.code}} - {{ category.description }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="form-group">
-        <label for="number_of_employees">Количество сотрудников</label>
-        <input type="number" class="form-control" id="number_of_employees" name="number_of_employees">
+        <label for="insp_sex_m">Количество сотрудников мужского пола</label>
+        <input type="number" class="form-control" id="insp_sex_m" name="insp_sex_m" min="0" max="10" value="0" required>
+    </div>
+    <div class="form-group">
+        <label for="insp_sex_f">Количество сотрудников женского пола</label>
+        <input type="number" class="form-control" id="insp_sex_f" name="insp_sex_f" min="0" max="10" value="0" required>
     </div>
     <div class="form-group">
         <label for="status">Статус заявки</label>
         <select class="form-control" id="status" name="status">
-            <option value="Не подтверждена">Не подтверждена</option>
-            <option value="В рассмотрении">В рассмотрении</option>
-            <option value="Принята">Принята</option>
-            <option value="Инспектор выехал">Инспектор выехал</option>
-            <option value="Инспектор на месте">Инспектор на месте</option>
-            <option value="Поездка">Поездка</option>
-            <option value="Заявка закончена">Заявка закончена</option>
-            <option value="Пассажир опаздывает">Пассажир опаздывает</option>
-            <option value="Инспектор опаздывает">Инспектор опаздывает</option>
+            {% for status in request_statuses %}
+            <option value="{{ status.id }}">{{ status.status }}</option>
+            {% endfor %}
         </select>
     </div>
+
     <div class="form-group">
         <label for="additional_info">Дополнительная информация</label>
         <textarea class="form-control" id="additional_info" name="additional_info"></textarea>
     </div>
     <button type="submit" class="btn btn-primary">Сохранить</button>
 </form>
+<div class="modal fade" id="routeInfoModal" tabindex="-1" aria-labelledby="routeInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="routeInfoModalLabel">Информация о маршруте</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
+                <div id="routeDetails">
+                    <!-- Здесь будет отображена информация о маршруте -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+    .vertical-line {
+        width: 2px;
+        background-color: black;
+        position: relative;
+        margin: 0 auto;
+        height: 200px;
+    }
+    .station-point {
+        width: 10px;
+        height: 10px;
+        background-color: red;
+        border-radius: 50%;
+        position: absolute;
+        left: -4px; /* чтобы центрировать точки по вертикальной линии */
+    }
+    .station-label {
+        position: absolute;
+        left: 20px;
+        white-space: nowrap;
+    }
+</style>
+<script>
+$(document).ready(function() {
+    var metroStations = [
+        {% for station in metro_stations %}
+        { label: "{{ station.name_station }}", value: "{{ station.id }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    var passengers = [
+        {% for passenger in passengers %}
+        { label: "{{ passenger.name }}", value: "{{ passenger.id }}", category: "{{ passenger.category.id }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    function setupAutocomplete(inputSelector, hiddenInputSelector, data) {
+        $(inputSelector).autocomplete({
+            source: data,
+            minLength: 0,
+            select: function(event, ui) {
+                $(inputSelector).val(ui.item.label);
+                $(hiddenInputSelector).val(ui.item.value);
+                calculateTimeOver();  // recalculate time_over when a station is selected
+
+                if (ui.item.category) {
+                    $("#request_category").val(ui.item.category);
+                }
+
+                return false;
+            },
+            change: function(event, ui) {
+                if (!ui.item) {
+                    $(inputSelector).val("");
+                    $(hiddenInputSelector).val("");
+                }
+            }
+        }).focus(function() {
+            $(this).autocomplete("search", "");
+        });
+    }
+
+    setupAutocomplete("#departure_station", "#departure_station_id", metroStations);
+    setupAutocomplete("#arrival_station", "#arrival_station_id", metroStations);
+    setupAutocomplete("#passenger", "#passenger_id", passengers);
+
+    // function convertSecondsToHMS(seconds) {
+    //     let hours = Math.floor(seconds / 3600);
+    //     let minutes = Math.floor((seconds % 3600) / 60);
+
+    //     // Форматирование часов и минут с ведущими нулями
+    //     hours = String(hours).padStart(2, '0');
+    //     minutes = String(minutes).padStart(2, '0');
+
+    //     return `${hours}:${minutes}`;
+    // }
+    function calculateTimeOver() {
+        var departure = $("#departure_station_id").val();
+        var arrival = $("#arrival_station_id").val();
+
+        if (departure && arrival) {
+            $.ajax({
+                url: "{% url 'calculate_time_over' %}",
+                data: {
+                    departure: departure,
+                    arrival: arrival
+                },
+
+                success: function(data) {
+                    $("#time_over").val(data.time_over);
+                    updateRouteDetails(data.travel_path, data.transfers, data.transfers_count);
+
+                }
+            });
+        }
+    }
+    function updateRouteDetails(travel_path, transfers, transfers_count) {
+        var routeDetailsDiv = $("#routeDetails");
+        routeDetailsDiv.empty();
+        routeDetailsDiv.append('<p>' + transfers_count + '</p>');
+
+        if (transfers.length > 0) {
+            routeDetailsDiv.append('<h5>Пересадки:</h5>');
+            transfers.forEach(function(transfer) {
+                routeDetailsDiv.append('<p>' + getStationById(transfer[0]).label + ' -> ' + getStationById(transfer[1]).label + '</p>');
+            });
+        }
+
+        // Create vertical line
+        var verticalLine = $('<div class="vertical-line"></div>');
+        routeDetailsDiv.append(verticalLine);
+
+        travel_path.forEach(function(station_id, index) {
+            var station = getStationById(station_id);
+
+            // Create station point
+            var stationPoint = $('<div class="station-point"></div>');
+            stationPoint.css('top', (index * 20) + 'px'); // adjust the position
+
+            // Create station label
+            var stationLabel = $('<div class="station-label"></div>');
+            stationLabel.css('top', (index * 20 - 5) + 'px'); // adjust the position
+            stationLabel.text(station.label);
+
+            verticalLine.append(stationPoint);
+            verticalLine.append(stationLabel);
+        });
+    }
+
+    function getStationById(id) {
+        return metroStations.find(station => station.value == id);
+    }
+
+    $("#departure_station, #arrival_station").on("change", calculateTimeOver);
+
+    $("form").on("submit", function(event) {
+        var insp_sex_m = parseInt($("#insp_sex_m").val());
+        var insp_sex_f = parseInt($("#insp_sex_f").val());
+
+        if (insp_sex_m === 0 && insp_sex_f === 0) {
+            alert("Количество сотрудников мужского и женского пола не может быть одновременно нулевым.");
+            event.preventDefault();
+        }
+
+        if (!$("#departure_station_id").val() || !$("#arrival_station_id").val() || !$("#passenger_id").val()) {
+            alert("Пожалуйста, выберите значения из списка для всех полей.");
+            event.preventDefault();
+        }
+    });
+});
+</script>
 {% endblock %}

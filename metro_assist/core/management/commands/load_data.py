@@ -2,9 +2,13 @@ import json
 import os
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from core.models import Employee, MetroStation, MetroTravelTime, MetroTransferTime, Request, Passenger, RequestReschedule, RequestCancellation, NoShow
+from core.models import (Employee, MetroStation, MetroTravelTime, 
+                         MetroTransferTime, Request, Passenger, 
+                         RequestReschedule, RequestCancellation,
+                         NoShow, PassengerCategory, RequestStatus)
 from datetime import datetime
 import pytz
+from collections import defaultdict
 
 class Command(BaseCommand):
     help = 'Load data from JSON file into the database'
@@ -36,9 +40,8 @@ class Command(BaseCommand):
             data = json.load(file)
             for item in data:
                 employee, created = Employee.objects.update_or_create(
-                    id= item['ID'],
-                    defaults={
-                        
+                    id = item['ID'],
+                    defaults={                        
                         'date': datetime.strptime(item['DATE'], '%d.%m.%Y').date(),
                         'time_work': item['TIME_WORK'],
                         'fio': item['FIO'],
@@ -116,6 +119,8 @@ class Command(BaseCommand):
             for item in data:
                 # passenger = Passenger.objects.get(id=item['id_pas']) 
                 # passenger = item['id_pas']
+                category, _ = PassengerCategory.objects.get_or_create(code=item['cat_pas'])
+
                 try:
                     passenger = Passenger.objects.get(id=item['id_pas'])
                 except Passenger.DoesNotExist:
@@ -124,12 +129,15 @@ class Command(BaseCommand):
                         name="Тестовый Пассажир",
                         contact_phone="0000000000",
                         gender="Не указан",
-                        category="IU",
+                        category=category,
                         additional_info="Тестовый пассажир создан автоматически",
                         has_eks=False
                     )
+                requests_status, created = RequestStatus.objects.get_or_create(status=item['status'])
+
                 station1 = MetroStation.objects.get(id=item['id_st1'])
                 station2 = MetroStation.objects.get(id=item['id_st2'])
+
                 request, created = Request.objects.update_or_create(
                     id=item['id'],
 
@@ -138,8 +146,8 @@ class Command(BaseCommand):
                         'datetime': self.parse_datetime(item['datetime']),#datetime.strptime(item['datetime'], '%d.%m.%Y %H:%M:%S'),
                         'time3': datetime.strptime(item['time3'], '%H:%M:%S').time(),
                         'time4': datetime.strptime(item['time4'], '%H:%M:%S').time(),
-                        'cat_pas': item['cat_pas'],
-                        'status': item['status'],
+                        'cat_pas': category,
+                        'status': requests_status,
                         'tpz': self.parse_datetime(item['tpz']),#datetime.strptime(item['tpz'], '%d.%m.%Y %H:%M:%S'),
                         'insp_sex_m': int(item['INSP_SEX_M']),
                         'insp_sex_f': int(item['INSP_SEX_F']),

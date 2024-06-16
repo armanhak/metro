@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Распределение заявок</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+        <label for="distribution_date">Выберите дату для распределения заявок</label>
+        <input type="date" class="form-control" id="distribution_date" name="distribution_date" required>
+    </div>
+
+    <div class="btn-group mt-4">
+        <button type="submit" class="btn btn-primary" name="action" value="distribute">Распределить</button>
+        <button type="submit" class="btn btn-warning" name="action" value="adaptive">Адаптивное</button>
+    </div>
+</form>
+{% endblock %}
