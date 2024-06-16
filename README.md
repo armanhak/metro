@@ -13,7 +13,7 @@ docker-compose -f "docker-compose.local.yml" up --build
 
 ## Запуск распределения задач (VRPTW)
 Распределение задач работает отдельно от веб-сайта. <br>
-Для запуска распределения задач нужно выполнить сделующие команды
+Для запуска распределения задач нужно выполнить сделующие команды (утановить менеджер пакетов pip, если еще нет. python --version 3.10)
 ```sh
 pip install -m metro_assist/requirements.txt
 venv/scripts/activate
