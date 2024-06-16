@@ -1,3 +1,7 @@
+#!/bin/sh
+
+# Exit immediately if a command exits with a non-zero status
+set -e
 # Установка pip, если не установлен (на Windows)
 python -m ensurepip --upgrade
 
@@ -20,3 +24,4 @@ venv\Scripts\activate
 
 # Установка зависимостей
 pip install -r ./metro_assist/requirements.txt
+exec "$@"
