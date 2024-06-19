@@ -49,37 +49,70 @@ class MetroTransferTime(models.Model):
         return f"Transfer from {self.id1} to {self.id2}"
 
 # Модель для сотрудников
-class Employee(models.Model):
-    date = models.DateField()
-    time_work = models.CharField(max_length=50)
-    fio = models.CharField(max_length=255)
-    uchastok = models.CharField(max_length=50)
-    smena = models.CharField(max_length=50)
-    rank = models.CharField(max_length=50)
-    sex = models.CharField(max_length=1)  # 'M' or 'F'
-
-    def __str__(self):
-        return self.fio
-
-# Модель для заявок
-# class Request(models.Model):
-#     id_pas = models.ForeignKey('Passenger', on_delete=models.CASCADE)
-    
-#     datetime = models.DateTimeField()
-#     time3 = models.TimeField()
-#     time4 = models.TimeField()
-#     cat_pas = models.CharField(max_length=3, choices=Passenger.CATEGORY_CHOICES)
-#     status = models.CharField(max_length=50)
-#     tpz = models.DateTimeField(default=timezone.now)
-
-#     insp_sex_m = models.IntegerField()
-#     insp_sex_f = models.IntegerField()
-#     time_over = models.TimeField()  # Время в формате HH:MM:SS
-#     id_st1 = models.ForeignKey(MetroStation, related_name='request_start_station', on_delete=models.CASCADE)
-#     id_st2 = models.ForeignKey(MetroStation, related_name='request_end_station', on_delete=models.CASCADE)
+# class Employee(models.Model):
+#     date = models.DateField()
+#     time_work = models.CharField(max_length=50)
+#     fio = models.CharField(max_length=255)
+#     uchastok = models.CharField(max_length=50)
+#     smena = models.CharField(max_length=50)
+#     rank = models.CharField(max_length=50)
+#     sex = models.CharField(max_length=1)  # 'M' or 'F'
 
 #     def __str__(self):
-#         return f"Request {self.id_request}"
+#         return self.fio
+
+class Uchastok(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+    
+class WorkTime(models.Model):
+    uchastok = models.ForeignKey(Uchastok, related_name='work_times', on_delete=models.CASCADE)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+
+    def __str__(self):
+        return f"{self.uchastok.name}: {self.start_time} - {self.end_time}"
+class Rank(models.Model):
+    name = models.CharField(max_length=50)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Smena(models.Model):
+    name = models.CharField(max_length=10)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+class Gender(models.Model):
+    name = models.CharField(max_length=10)
+
+    def __str__(self):
+        return self.name
+
+class Employee(models.Model):
+    full_name = models.CharField(max_length=255)
+    initials = models.CharField(max_length=255)
+    gender = models.CharField(max_length=10)
+    shift = models.ForeignKey(Smena, on_delete=models.CASCADE)
+    position = models.ForeignKey(Rank, on_delete=models.CASCADE)
+    work_phone = models.CharField(max_length=20)
+    personal_phone = models.CharField(max_length=20)
+    uchastok = models.ForeignKey(Uchastok, on_delete=models.CASCADE)
+    work_times = models.ManyToManyField(WorkTime)
+    tab_number = models.CharField(max_length=50)
+    light_duty = models.BooleanField(default=False)
+
+
+
+    def __str__(self):
+        return self.full_name
+    
 class RequestMethod(models.Model):
     method = models.CharField(max_length=25)
 

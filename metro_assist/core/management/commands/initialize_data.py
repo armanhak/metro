@@ -1,5 +1,10 @@
 from django.core.management.base import BaseCommand
-from core.models import PassengerCategory, RequestStatus, RequestMethod
+from core.models import (PassengerCategory,
+                         RequestStatus,
+                         RequestMethod,
+                         Uchastok, Smena, Rank,
+                         WorkTime, Gender
+                         )
 
 class Command(BaseCommand):
     help = 'Initialize data for PassengerCategory, RequestStatus, and RequestMethod'
@@ -43,6 +48,50 @@ class Command(BaseCommand):
             {'method': 'Электронные сервисы'},
         ]
 
+        uchastoks = [
+            {'name': 'ЦУ-1', 'description': ''},
+            {'name': 'ЦУ-2', 'description': ''},
+            {'name': 'ЦУ-3', 'description': ''},
+            {'name': 'ЦУ-3(Н)', 'description': ''},
+            {'name': 'ЦУ-4', 'description': ''},
+            {'name': 'ЦУ-4(Н)', 'description': ''},
+            {'name': 'ЦУ-5', 'description': ''},
+            {'name': 'ЦУ-8', 'description': ''},
+        ]
+
+        smenas = [
+            {'name': '1', 'description': ''},
+            {'name': '2', 'description': ''},
+            {'name': '1(Н)', 'description': ''},
+            {'name': '2(Н)', 'description': ''},
+            {'name': '5', 'description': ''},
+        ]
+
+        ranks = [
+            {'name': 'ЦСИ', 'description': ''},
+            {'name': 'ЦИО', 'description': ''},
+            {'name': 'ЦИ', 'description': ''},
+        ]
+        work_times = [
+            {'uchastok_name': 'ЦУ-1', 'start_time': '07:00', 'end_time': '19:00'},
+            {'uchastok_name': 'ЦУ-1', 'start_time': '08:00', 'end_time': '20:00'},
+            {'uchastok_name': 'ЦУ-2', 'start_time': '07:00', 'end_time': '19:00'},
+            {'uchastok_name': 'ЦУ-2', 'start_time': '08:00', 'end_time': '20:00'},
+            {'uchastok_name': 'ЦУ-3', 'start_time': '07:00', 'end_time': '19:00'},
+            {'uchastok_name': 'ЦУ-3', 'start_time': '08:00', 'end_time': '20:00'},
+            {'uchastok_name': 'ЦУ-3', 'start_time': '10:00', 'end_time': '22:00'},
+            {'uchastok_name': 'ЦУ-3(Н)', 'start_time': '20:00', 'end_time': '08:00'},
+            {'uchastok_name': 'ЦУ-4', 'start_time': '07:00', 'end_time': '19:00'},
+            {'uchastok_name': 'ЦУ-4', 'start_time': '08:00', 'end_time': '20:00'},
+            {'uchastok_name': 'ЦУ-4', 'start_time': '10:00', 'end_time': '22:00'},
+            {'uchastok_name': 'ЦУ-4(Н)', 'start_time': '20:00', 'end_time': '08:00'},
+            {'uchastok_name': 'ЦУ-5', 'start_time': '07:00', 'end_time': '19:00'},
+            {'uchastok_name': 'ЦУ-5', 'start_time': '08:00', 'end_time': '20:00'},
+            {'uchastok_name': 'ЦУ-5', 'start_time': '10:00', 'end_time': '22:00'},
+            {'uchastok_name': 'ЦУ-8', 'start_time': '07:00', 'end_time': '19:00'},
+            {'uchastok_name': 'ЦУ-8', 'start_time': '08:00', 'end_time': '20:00'},
+        ]
+
         for category in passenger_categories:
             PassengerCategory.objects.get_or_create(code=category['code'], defaults={'description': category['description']})
 
@@ -52,4 +101,25 @@ class Command(BaseCommand):
         for method in request_methods:
             RequestMethod.objects.get_or_create(method=method['method'])
 
+        for uchastok in uchastoks:
+            Uchastok.objects.get_or_create(name=uchastok['name'], defaults={'description': uchastok['description']})
+        genders = [
+            {'name': 'Мужской'},
+            {'name': 'Женский'},
+        ]
+        for smena in smenas:
+            Smena.objects.get_or_create(name=smena['name'], defaults={'description': smena['description']})
+
+        for gender in genders:
+            Gender.objects.get_or_create(name=gender['name'])
+
+        for rank in ranks:
+            Rank.objects.get_or_create(name=rank['name'], defaults={'description': rank['description']})            
+        for wt in work_times:
+            uchastok = Uchastok.objects.get(name=wt['uchastok_name'])
+            WorkTime.objects.get_or_create(
+                uchastok=uchastok,
+                start_time=wt['start_time'],
+                end_time=wt['end_time']
+            )
         self.stdout.write(self.style.SUCCESS('Data initialized successfully'))

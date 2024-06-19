@@ -3,7 +3,9 @@ from django.shortcuts import render, redirect
 from rest_framework import viewsets
 from .models import (Passenger, Request, Employee, 
                      MetroStation, RequestMethod, 
-                     RequestStatus, PassengerCategory) #WorkSchedule
+                     RequestStatus, PassengerCategory,
+                      Uchastok, Smena, Rank, WorkTime, Gender
+                     ) #WorkSchedule
 from .serializers import PassengerSerializer, RequestSerializer, EmployeeSerializer#, WorkScheduleSerializer
 from .forms import PassengerForm, RequestForm, EmployeeForm
 from datetime import time
@@ -108,13 +110,54 @@ def register_request(request):
 
 def register_employee(request):
     if request.method == 'POST':
-        form = EmployeeForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('/')
-    else:
-        form = EmployeeForm()
-    return render(request, 'register_employee.html', {'form': form})
+        full_name = request.POST['full_name']
+        initials = request.POST['initials']
+        gender = Gender.objects.get(id=request.POST['gender'])
+        shift = Smena.objects.get(id=request.POST['shift'])
+        position = Rank.objects.get(id=request.POST['position'])
+        uchastok = Uchastok.objects.get(id=request.POST['uchastok'])
+        work_phone = request.POST['work_phone']
+        personal_phone = request.POST['personal_phone']
+        tab_number = request.POST['tab_number']
+        light_duty = request.POST['light_duty']
+        work_times = request.POST.getlist('work_times')
+
+        employee = Employee.objects.create(
+            full_name=full_name,
+            initials=initials,
+            gender=gender,
+            shift=shift,
+            position=position,
+            uchastok=uchastok,
+            work_phone=work_phone,
+            personal_phone=personal_phone,
+            tab_number=tab_number,
+            light_duty=light_duty
+        )
+
+        for work_time_id in work_times:
+            work_time = WorkTime.objects.get(id=work_time_id)
+            employee.work_times.add(work_time)
+
+        return redirect('some_view')
+
+    genders = Gender.objects.all()
+    smenas = Smena.objects.all()
+    ranks = Rank.objects.filter(name__in=['ЦСИ','ЦИ'])
+    uchastoks = Uchastok.objects.all()
+
+    context = {
+        'genders': genders,
+        'smenas': smenas,
+        'ranks': ranks,
+        'uchastoks': uchastoks
+    }
+    return render(request, 'register_employee.html', context)
+
+def get_work_times(request):
+    uchastok_id = request.GET.get('uchastok_id')
+    work_times = WorkTime.objects.filter(uchastok_id=uchastok_id).values('id', 'start_time', 'end_time')
+    return JsonResponse(list(work_times), safe=False)
 
 # Представление для главной страницы
 def index(request):

@@ -4,7 +4,8 @@ from .views import (PassengerViewSet, RequestViewSet,
                     EmployeeViewSet,# WorkScheduleViewSet,
                     register_passenger, register_request,
                     request_distribution,
-                    register_employee, index, calculate_time_over)
+                    register_employee, index, calculate_time_over,
+                    get_work_times)
 
 router = DefaultRouter()
 router.register(r'passengers', PassengerViewSet)
@@ -20,6 +21,7 @@ urlpatterns = [
     path('request_distribution/', request_distribution, name='request_distribution'),
 
     path('calculate_time_over/', calculate_time_over, name='calculate_time_over'),
+    path('get_work_times/', get_work_times, name='get_work_times'),
 
     path('register_employee/', register_employee, name='register_employee'),
     path('api/', include(router.urls)),
