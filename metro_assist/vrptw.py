@@ -136,6 +136,7 @@ class MetroVRPSolver:
                         # in_interval,
                         int(task["id_st1"]),
                         int(task["id_st2"]),
+                        task['status']
                         )
                 result.append(curr)
             index = self.solution.Value(self.routing.NextVar(index))
@@ -215,7 +216,9 @@ class MetroVRPSolver:
                                                'Конечное время выполнения', 
                                                'Продолжительность', 
                                                'Начальная станция', 
-                                                 'Конечная станция'])
+                                                 'Конечная станция',
+                                                 'status'
+                                                 ])
             # stat = r[['Сотрудник ID', 'Продолжительность']].groupby(['Сотрудник ID']).agg(['count', 'mean', 'sum', 'min', 'max'])
             # stat.to_excel('stat.xlsx')
             # r.to_excel('Расписание.xlsx', index=False)
@@ -300,7 +303,7 @@ def load_workers_tasks(tasks_file, workers_file,
 
     workers = employers[['ID', 'FIO', 'start', 'end', 'SEX']].to_dict(orient='records')
     tasks = req[['id', 'start', 'end', 'id_st1',
-                  'id_st2', 'duration', 
+                  'id_st2', 'duration', 'status', 
                   'INSP_SEX_M', 'INSP_SEX_F']].to_dict(orient='records')
 
     return workers, tasks
@@ -361,8 +364,8 @@ if __name__ == "__main__":
     workersm, tasksm = load_workers_tasks(tasks_file=tasks_file, 
                                         workers_file=workers_file, 
                                         gender='M',
-                                        wcount=40, # all male employers
-                                        tcount=80# all male requests
+                                        wcount=200, # all male employers
+                                        tcount=600# all male requests
                                         )
     workersf, tasksf = load_workers_tasks(tasks_file=tasks_file, 
                                         workers_file=workers_file, 
