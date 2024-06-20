@@ -125,7 +125,7 @@ class MetroVRPSolver:
 
                 # in_interval = self.workers[vehicle_id]["start"] <= task["start"] and self.workers[vehicle_id]["end"] >= task["end"]
                 curr = (
-                        int(self.workers[vehicle_id]["ID"]),
+                        self.workers[vehicle_id]["FIO"],
                         int(taskid.split('_')[0]),
                         int(self.workers[vehicle_id]["start"]),
                         int(self.workers[vehicle_id]["end"]),
@@ -207,7 +207,7 @@ class MetroVRPSolver:
                 result.extend(vehicle_result)
                 completed_tasks_total += completed_tasks
 
-            r = pd.DataFrame(result, columns=['Сотрудник ID', 'Задача ID',
+            r = pd.DataFrame(result, columns=['Сотрудник', 'Задача ID',
                                                'Начало рабочего дня',
                                                'Конец рабочего дня', 
                                                'Начальное время выполнения', 
@@ -291,7 +291,7 @@ def load_workers_tasks(tasks_file, workers_file,
     elif gender=="M":
         req[f'INSP_SEX_F'] = 0
 
-    workers = employers[['ID', 'start', 'end', 'SEX']].to_dict(orient='records')
+    workers = employers[['ID', 'start', 'end', 'FIO', 'SEX']].to_dict(orient='records')
     tasks = req[['id', 'start', 'end', 'id_st1',
                   'id_st2', 'duration', 
                   'INSP_SEX_M', 'INSP_SEX_F']].to_dict(orient='records')
@@ -335,6 +335,7 @@ if __name__ == "__main__":
     tasks_file='./metro_assist/base_data/Заявки.json'
     travel_time_file='./metro_assist/base_data/Метро время между станциями.json'
     transfer_time_file='./metro_assist/base_data/Метро время пересадки между станциями.json'
+    # metro_s
     
     prept = time.time()
     travel_data, transfer_data = load_travel_transfer_data(travel_time_file, 
@@ -374,7 +375,7 @@ if __name__ == "__main__":
         results = [f.result() for f in as_completed(futures)]
 
     results = pd.concat(results, axis=0, ignore_index=True)
-    stat = results[['Сотрудник ID', 'Продолжительность']].groupby(['Сотрудник ID']).agg(['count', 'mean', 'sum', 'min', 'max'])
+    stat = results[['Сотрудник', 'Продолжительность']].groupby(['Сотрудник']).agg(['count', 'mean', 'sum', 'min', 'max'])
     
     stat.to_excel('stat.xlsx')
     results['Продолжительность']-=720 #12 часов, начало отсчета предыдущего дня
