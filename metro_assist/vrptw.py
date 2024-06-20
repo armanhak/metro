@@ -34,7 +34,7 @@ def fill_time_matrix(time_matrix, task_index_items, tasks, get_travel_time, num_
             task2_id = task2_key.split("_")[0]
             task2 = task_cache[task2_id]
             travel_time = get_travel_time(int(task1['id_st2']), int(task2['id_st1']))
-            if task1['end'] + travel_time <= task2['start']:
+            if task1['end'] + travel_time <= task2['start']-15:
                 time_matrix[task1_value, task2_value] = travel_time + task1['duration']
             else:
                 time_matrix[task1_value, task2_value] = 1000
@@ -86,7 +86,8 @@ class MetroVRPSolver:
     def create_data_model(self):
         self.data = {
             'time_matrix': self.time_matrix,
-            'time_windows': [(0, 2880)] + [(task['start'], task['end']) for task in self.tasks for _ in range(int(task['INSP_SEX_M']) + int(task['INSP_SEX_F']))],
+            'time_windows': [(0, 2880)] + [(task['start']-15, #инспектор должен быть на месте за 15 мин
+                                             task['end']) for task in self.tasks for _ in range(int(task['INSP_SEX_M']) + int(task['INSP_SEX_F']))],
             'num_vehicles': len(self.workers),
             'depot': 0,
             'task_durations': [0] + [task['duration'] for task in self.tasks for _ in range(int(task['INSP_SEX_M']) + int(task['INSP_SEX_F']))]
@@ -282,7 +283,13 @@ def load_workers_tasks(tasks_file, workers_file,
 
     req['INSP_SEX_M'] = req['INSP_SEX_M'].astype(int)
     req['INSP_SEX_F'] = req['INSP_SEX_F'].astype(int)
-
+    req = req.loc[~req['status'].isin([
+                                       'Отмена', 
+                                       'Отмена заявки по просьбе пассажира', 
+                                       'Отмена заявки по неявке пассажира',
+                                       'Отказ по регламенту',
+                                       'Отказ',
+                                       ])].reset_index(drop=True)
     if gender != 'A':
         employers = employers.loc[employers['SEX']==tdic[gender]].reset_index(drop=True)
         req = req.loc[req[f'INSP_SEX_{gender}']>0].reset_index(drop=True)
