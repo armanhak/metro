@@ -1,5 +1,8 @@
 import networkx as nx
 from .models import MetroTravelTime, MetroTransferTime
+from itertools import combinations
+from datetime import datetime, timedelta
+import pandas as pd
 
 def distribute_requests():
     # Основная логика распределения заявок
@@ -107,3 +110,127 @@ class MetroGraph():
                 form = "пересадок"
         
         return f"{n} {form}"
+    
+def schedule_lunch(schedule, min_lunch_gap=0):
+    results = []
+    
+    def parse_time(time_str):
+        return datetime.strptime(time_str, "%H:%M:%S")
+    
+    def format_time(time):
+        return time.strftime("%H:%M:%S")
+    
+    def is_overlap(interval1, interval2, min_gap=0):
+        gap = timedelta(minutes=min_gap)
+        return interval1[0] < interval2[1] + gap and interval1[1] + gap > interval2[0]
+
+    def adjust_for_night_shift(start, end):
+        """Adjust for night shifts by extending the end time into the next day if necessary."""
+        if end <= start:
+            end += timedelta(days=1)
+        return start, end
+    
+    def generate_lunch_intervals(lunch_start_min, lunch_end_max, step=30):
+        intervals = []
+        current_start = lunch_start_min
+        while current_start + timedelta(hours=1) <= lunch_end_max:
+            intervals.append((current_start, current_start + timedelta(hours=1)))
+            current_start += timedelta(minutes=step)
+        return intervals
+
+    for employee in schedule:
+        employee_id = employee["Сотрудник ID"]
+        work_start = parse_time(str(employee["work_start"]))
+        work_end = parse_time(str(employee["work_end"]))        
+        
+        work_start, work_end = adjust_for_night_shift(work_start, work_end)
+        
+        lunch_start_min = work_start + timedelta(hours=3.5)
+        lunch_end_max = work_end - timedelta(hours=1)
+        
+        requests = employee["requests"]
+        time_intervals = [(parse_time(str(start)), parse_time(str(end))) for start, end in requests["time_intervals"]]
+        time_intervals = [adjust_for_night_shift(start, end) for start, end in time_intervals]
+
+        possible_lunch_intervals = generate_lunch_intervals(lunch_start_min, lunch_end_max)
+        
+        lunch_found = False
+        for lunch_interval in possible_lunch_intervals:
+            if all(not is_overlap(interval, lunch_interval, min_lunch_gap) for interval in time_intervals):
+                results.append({
+                    "Сотрудник ID": employee_id,
+                    "cancelled_request_id": None,
+                    "cancelled_request_interval": None,
+                    "Начало обеда": format_time(lunch_interval[0]), 
+                    "Конец обеда": format_time(lunch_interval[1])
+                    # "lunch_interval": (format_time(lunch_interval[0]), format_time(lunch_interval[1]))
+                })
+                lunch_found = True
+                break
+        
+        if not lunch_found:
+            sorted_requests = sorted(time_intervals, key=lambda i: ((i[1] - i[0]).seconds, i[0]))
+            for combo_length in range(1, len(sorted_requests) + 1):
+                found_valid_combination = False
+                for to_cancel in combinations(sorted_requests, combo_length):
+                    remaining_intervals = [i for i in time_intervals if i not in to_cancel]
+                    for lunch_interval in possible_lunch_intervals:
+                        if all(not is_overlap(interval, lunch_interval, min_lunch_gap) for interval in remaining_intervals):
+                            cancelled_ids = [requests["id"][time_intervals.index(i)] for i in to_cancel]
+                            cancelled_intervals = [(format_time(i[0]), format_time(i[1])) for i in to_cancel]
+                            results.append({
+                                "Сотрудник ID": employee_id,
+                                "cancelled_request_id": cancelled_ids,
+                                "cancelled_request_interval": cancelled_intervals,
+                                "Начало обеда": format_time(lunch_interval[0]), 
+                                "Конец обеда": format_time(lunch_interval[1])
+                                # "lunch_interval": (format_time(lunch_interval[0]), format_time(lunch_interval[1]))
+                            })
+                            lunch_found = True
+                            found_valid_combination = True
+                            break
+                    if found_valid_combination:
+                        break
+                if lunch_found:
+                    break
+    
+    return results
+
+# загоняет df расписаний в массив для передачи в функцию определения обедов
+def df_to_list_of_dicts(df):
+    result = []
+    
+    # Группировка данных по сотруднику
+    grouped = df.groupby('Сотрудник ID')
+    
+    for name, group in grouped:
+        employee_data = {
+            'Сотрудник ID': name,
+            'work_start': group['Начало рабочего дня'].iloc[0],
+            'work_end': group['Конец рабочего дня'].iloc[0],
+            'requests': {
+                'id': group['Задача ID'].tolist(),
+                'time_intervals': list(zip(group['Начальное время выполнения'], group['Конечное время выполнения']))
+            }
+        }
+        result.append(employee_data)
+    
+    return result
+
+def add_lunch(df):
+    """К итоговой таблице рассписания добавляет начало и конец обеда.
+        Если у сотрудника плотный все занято и нет место для обеда, то освобождает место для обеды
+    """
+    df_dic = df_to_list_of_dicts(df)
+    results = schedule_lunch(df_dic)
+
+    canceled_task_id = sum([r['cancelled_request_id'] for r in results if r['cancelled_request_id']], [])
+    df = df.loc[~df['Задача ID'].isin(canceled_task_id)].reset_index(drop=True)
+
+    results = pd.DataFrame(results)
+
+    df = df.merge(results[['Сотрудник ID', 'Начало обеда', 'Конец обеда']],
+                   left_on='Сотрудник ID', 
+                   right_on=['Сотрудник ID'],
+                     how='left')#.to_excel('with_lunch.xlsx', index=False)
+    return df

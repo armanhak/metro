@@ -6,7 +6,14 @@ import pandas as pd
 import numpy as np
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import os
+import django
 
+# Установите переменную окружения DJANGO_SETTINGS_MODULE
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'metro_assist.settings')
+# Настройка Django
+django.setup()
+from core.utils import add_lunch
 
 def convert_decimal_minutes_to_seconds(decimal_minutes):
     minutes = int(decimal_minutes)
@@ -125,7 +132,13 @@ class MetroVRPSolver:
 
                 # in_interval = self.workers[vehicle_id]["start"] <= task["start"] and self.workers[vehicle_id]["end"] >= task["end"]
                 curr = (
+<<<<<<< Updated upstream
                         int(self.workers[vehicle_id]["ID"]),
+=======
+                        self.workers[vehicle_id]["ID"],
+                        self.workers[vehicle_id]["FIO"],
+                        self.workers[vehicle_id]["SEX"],
+>>>>>>> Stashed changes
                         int(taskid.split('_')[0]),
                         int(self.workers[vehicle_id]["start"]),
                         int(self.workers[vehicle_id]["end"]),
@@ -207,7 +220,11 @@ class MetroVRPSolver:
                 result.extend(vehicle_result)
                 completed_tasks_total += completed_tasks
 
+<<<<<<< Updated upstream
             r = pd.DataFrame(result, columns=['Сотрудник ID', 'Задача ID',
+=======
+            r = pd.DataFrame(result, columns=['Сотрудник ID','Сотрудник','Пол', 'Задача ID',
+>>>>>>> Stashed changes
                                                'Начало рабочего дня',
                                                'Конец рабочего дня', 
                                                'Начальное время выполнения', 
@@ -370,22 +387,41 @@ if __name__ == "__main__":
     st = time.time()
 
     with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(solver.run) for solver in [solver_male, solver_female]]
+        futures = [executor.submit(solver.run) for solver in [solver_male, 
+                                                              solver_female]]
         results = [f.result() for f in as_completed(futures)]
 
     results = pd.concat(results, axis=0, ignore_index=True)
+<<<<<<< Updated upstream
     stat = results[['Сотрудник ID', 'Продолжительность']].groupby(['Сотрудник ID']).agg(['count', 'mean', 'sum', 'min', 'max'])
     
     stat.to_excel('stat.xlsx')
     results['Продолжительность']-=720 #12 часов, начало отсчета предыдущего дня
+=======
+
+>>>>>>> Stashed changes
     for col in ['Начало рабочего дня', 
                 'Конец рабочего дня', 
                 'Начальное время выполнения',
                 'Конечное время выполнения',
-                'Продолжительность'
+                # 'Продолжительность'
                 ]:
         results[col] = results[col].map(convert_to_time)
 
+<<<<<<< Updated upstream
+=======
+    results = add_lunch(results)# добавим время обеда
+
+    stat = results[['Сотрудник', 'Продолжительность']].groupby(['Сотрудник']).agg(['count', 'mean', 'sum', 'min', 'max'])    
+    stat.to_excel('stat.xlsx')# Сохраним статистику по времени выполнению задач
+
+    results['Продолжительность']-=720 #12 часов, начало отсчета предыдущего дня
+    results['Продолжительность'] = results['Продолжительность'].map(convert_to_time)
+
+
+    for col in ['Начальная станция', 'Конечная станция']:
+        results[col] = results[col].replace(metro_id_name_dict)
+>>>>>>> Stashed changes
     results.to_excel('Расписание.xlsx', index=False)
 
     print('Общее кол-во назанченных задач', len(results))
