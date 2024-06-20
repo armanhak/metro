@@ -9,12 +9,17 @@ class PassengerCategory(models.Model):
 
     def __str__(self):
         return f"{self.code} - {self.description}"
+class Gender(models.Model):
+    name = models.CharField(max_length=10, unique=True)
+
+    def __str__(self):
+        return self.name
 class Passenger(models.Model):
 
     name = models.CharField(max_length=255)
     contact_phone = models.CharField(max_length=20)
     additional_phone_info = models.TextField(null=True, blank=True)
-    gender = models.CharField(max_length=10)
+    gender = models.ForeignKey(Gender, on_delete=models.CASCADE)
     category = models.ForeignKey(PassengerCategory, on_delete=models.CASCADE)
     additional_info = models.TextField(null=True, blank=True)
     has_eks = models.BooleanField(default=False)
@@ -48,19 +53,6 @@ class MetroTransferTime(models.Model):
     def __str__(self):
         return f"Transfer from {self.id1} to {self.id2}"
 
-# Модель для сотрудников
-# class Employee(models.Model):
-#     date = models.DateField()
-#     time_work = models.CharField(max_length=50)
-#     fio = models.CharField(max_length=255)
-#     uchastok = models.CharField(max_length=50)
-#     smena = models.CharField(max_length=50)
-#     rank = models.CharField(max_length=50)
-#     sex = models.CharField(max_length=1)  # 'M' or 'F'
-
-#     def __str__(self):
-#         return self.fio
-
 class Uchastok(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
@@ -89,29 +81,25 @@ class Smena(models.Model):
 
     def __str__(self):
         return self.name
-class Gender(models.Model):
-    name = models.CharField(max_length=10)
 
-    def __str__(self):
-        return self.name
 
 class Employee(models.Model):
-    full_name = models.CharField(max_length=255)
-    initials = models.CharField(max_length=255)
-    gender = models.CharField(max_length=10)
-    shift = models.ForeignKey(Smena, on_delete=models.CASCADE)
-    position = models.ForeignKey(Rank, on_delete=models.CASCADE)
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    patronymic = models.CharField(max_length=50)
+    initials = models.CharField(max_length=50, blank=True)
+    gender = models.ForeignKey(Gender, on_delete=models.CASCADE)
+    smena = models.ForeignKey(Smena, on_delete=models.CASCADE)
+    rank = models.ForeignKey(Rank, on_delete=models.CASCADE)
     work_phone = models.CharField(max_length=20)
     personal_phone = models.CharField(max_length=20)
     uchastok = models.ForeignKey(Uchastok, on_delete=models.CASCADE)
     work_times = models.ManyToManyField(WorkTime)
-    tab_number = models.CharField(max_length=50)
+    tab_number = models.CharField(max_length=50, null=True)
     light_duty = models.BooleanField(default=False)
 
-
-
     def __str__(self):
-        return self.full_name
+        return self.initials
     
 class RequestMethod(models.Model):
     method = models.CharField(max_length=25)

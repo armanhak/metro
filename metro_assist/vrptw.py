@@ -41,7 +41,7 @@ def fill_time_matrix(time_matrix, task_index_items, tasks, get_travel_time, num_
             task2_id = task2_key.split("_")[0]
             task2 = task_cache[task2_id]
             travel_time = get_travel_time(int(task1['id_st2']), int(task2['id_st1']))
-            if task1['end'] + travel_time <= task2['start']:
+            if task1['end'] + travel_time <= task2['start']-15:
                 time_matrix[task1_value, task2_value] = travel_time + task1['duration']
             else:
                 time_matrix[task1_value, task2_value] = 1000
@@ -93,7 +93,8 @@ class MetroVRPSolver:
     def create_data_model(self):
         self.data = {
             'time_matrix': self.time_matrix,
-            'time_windows': [(0, 2880)] + [(task['start'], task['end']) for task in self.tasks for _ in range(int(task['INSP_SEX_M']) + int(task['INSP_SEX_F']))],
+            'time_windows': [(0, 2880)] + [(task['start']-15, #инспектор должен быть на месте за 15 мин
+                                             task['end']) for task in self.tasks for _ in range(int(task['INSP_SEX_M']) + int(task['INSP_SEX_F']))],
             'num_vehicles': len(self.workers),
             'depot': 0,
             'task_durations': [0] + [task['duration'] for task in self.tasks for _ in range(int(task['INSP_SEX_M']) + int(task['INSP_SEX_F']))]
@@ -116,7 +117,7 @@ class MetroVRPSolver:
         task_start, task_end = task['start'], task['end']
         # worker_sex = worker['SEX']
         # task_sex = task_key.split("_")[1]
-        return worker_start <= task_start and worker_end >= task_end
+        return worker_start <= task_start-15 and worker_end >= task_end
 
     def process_vehicle(self, vehicle_id):
         # t =  time.time()
@@ -132,13 +133,9 @@ class MetroVRPSolver:
 
                 # in_interval = self.workers[vehicle_id]["start"] <= task["start"] and self.workers[vehicle_id]["end"] >= task["end"]
                 curr = (
-<<<<<<< Updated upstream
-                        int(self.workers[vehicle_id]["ID"]),
-=======
                         self.workers[vehicle_id]["ID"],
                         self.workers[vehicle_id]["FIO"],
                         self.workers[vehicle_id]["SEX"],
->>>>>>> Stashed changes
                         int(taskid.split('_')[0]),
                         int(self.workers[vehicle_id]["start"]),
                         int(self.workers[vehicle_id]["end"]),
@@ -148,6 +145,7 @@ class MetroVRPSolver:
                         # in_interval,
                         int(task["id_st1"]),
                         int(task["id_st2"]),
+                        task['status']
                         )
                 result.append(curr)
             index = self.solution.Value(self.routing.NextVar(index))
@@ -220,18 +218,16 @@ class MetroVRPSolver:
                 result.extend(vehicle_result)
                 completed_tasks_total += completed_tasks
 
-<<<<<<< Updated upstream
-            r = pd.DataFrame(result, columns=['Сотрудник ID', 'Задача ID',
-=======
             r = pd.DataFrame(result, columns=['Сотрудник ID','Сотрудник','Пол', 'Задача ID',
->>>>>>> Stashed changes
                                                'Начало рабочего дня',
                                                'Конец рабочего дня', 
                                                'Начальное время выполнения', 
                                                'Конечное время выполнения', 
                                                'Продолжительность', 
                                                'Начальная станция', 
-                                                 'Конечная станция'])
+                                                 'Конечная станция',
+                                                 'status'
+                                                 ])
             # stat = r[['Сотрудник ID', 'Продолжительность']].groupby(['Сотрудник ID']).agg(['count', 'mean', 'sum', 'min', 'max'])
             # stat.to_excel('stat.xlsx')
             # r.to_excel('Расписание.xlsx', index=False)
@@ -299,7 +295,13 @@ def load_workers_tasks(tasks_file, workers_file,
 
     req['INSP_SEX_M'] = req['INSP_SEX_M'].astype(int)
     req['INSP_SEX_F'] = req['INSP_SEX_F'].astype(int)
-
+    req = req.loc[~req['status'].isin([
+                                       'Отмена', 
+                                       'Отмена заявки по просьбе пассажира', 
+                                       'Отмена заявки по неявке пассажира',
+                                       'Отказ по регламенту',
+                                       'Отказ',
+                                       ])].reset_index(drop=True)
     if gender != 'A':
         employers = employers.loc[employers['SEX']==tdic[gender]].reset_index(drop=True)
         req = req.loc[req[f'INSP_SEX_{gender}']>0].reset_index(drop=True)
@@ -308,9 +310,9 @@ def load_workers_tasks(tasks_file, workers_file,
     elif gender=="M":
         req[f'INSP_SEX_F'] = 0
 
-    workers = employers[['ID', 'start', 'end', 'SEX']].to_dict(orient='records')
+    workers = employers[['ID', 'FIO', 'start', 'end', 'SEX']].to_dict(orient='records')
     tasks = req[['id', 'start', 'end', 'id_st1',
-                  'id_st2', 'duration', 
+                  'id_st2', 'duration', 'status', 
                   'INSP_SEX_M', 'INSP_SEX_F']].to_dict(orient='records')
 
     return workers, tasks
@@ -346,14 +348,23 @@ def convert_to_time(minutes):
     time = base_time + pd.to_timedelta(minutes, unit='m')
     return time.time()
 
+def laod_metro_names(path):
+    with open(path, 'r', encoding='utf-8') as f:
+        metro = json.load(f)
+    metro = {int(m['id']): m['name_station'] for m in metro}
+    return metro
+
 if __name__ == "__main__":
     allst = time.time()
     workers_file='./metro_assist/base_data/Сотрудники.json'
     tasks_file='./metro_assist/base_data/Заявки.json'
     travel_time_file='./metro_assist/base_data/Метро время между станциями.json'
     transfer_time_file='./metro_assist/base_data/Метро время пересадки между станциями.json'
+    metro_name_file = './metro_assist/base_data/Наименование станций метро.json'
     
     prept = time.time()
+    metro_id_name_dict = laod_metro_names(metro_name_file)
+
     travel_data, transfer_data = load_travel_transfer_data(travel_time_file, 
                                                            transfer_time_file)
     G = create_graph(travel_data=travel_data, 
@@ -362,8 +373,8 @@ if __name__ == "__main__":
     workersm, tasksm = load_workers_tasks(tasks_file=tasks_file, 
                                         workers_file=workers_file, 
                                         gender='M',
-                                        wcount=40, # all male employers
-                                        tcount=80# all male requests
+                                        wcount=200, # all male employers
+                                        tcount=600# all male requests
                                         )
     workersf, tasksf = load_workers_tasks(tasks_file=tasks_file, 
                                         workers_file=workers_file, 
@@ -392,14 +403,7 @@ if __name__ == "__main__":
         results = [f.result() for f in as_completed(futures)]
 
     results = pd.concat(results, axis=0, ignore_index=True)
-<<<<<<< Updated upstream
-    stat = results[['Сотрудник ID', 'Продолжительность']].groupby(['Сотрудник ID']).agg(['count', 'mean', 'sum', 'min', 'max'])
-    
-    stat.to_excel('stat.xlsx')
-    results['Продолжительность']-=720 #12 часов, начало отсчета предыдущего дня
-=======
 
->>>>>>> Stashed changes
     for col in ['Начало рабочего дня', 
                 'Конец рабочего дня', 
                 'Начальное время выполнения',
@@ -408,8 +412,6 @@ if __name__ == "__main__":
                 ]:
         results[col] = results[col].map(convert_to_time)
 
-<<<<<<< Updated upstream
-=======
     results = add_lunch(results)# добавим время обеда
 
     stat = results[['Сотрудник', 'Продолжительность']].groupby(['Сотрудник']).agg(['count', 'mean', 'sum', 'min', 'max'])    
@@ -421,7 +423,6 @@ if __name__ == "__main__":
 
     for col in ['Начальная станция', 'Конечная станция']:
         results[col] = results[col].replace(metro_id_name_dict)
->>>>>>> Stashed changes
     results.to_excel('Расписание.xlsx', index=False)
 
     print('Общее кол-во назанченных задач', len(results))

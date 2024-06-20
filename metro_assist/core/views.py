@@ -41,10 +41,13 @@ def register_passenger(request):
             return redirect('/')
     else:
         form = PassengerForm()
-        categories = PassengerCategory.objects.all()
+        # categories = PassengerCategory.objects.all()
+        # genders = Gender.objects.all()
     return render(request, 
                   'register_passenger.html',
-                    {'form': form, 'categories':categories},)
+                    {'form': form, 
+                    #  'categories':categories,
+                     },)
 
 def register_request(request):
     if request.method == 'POST':
@@ -110,11 +113,13 @@ def register_request(request):
 
 def register_employee(request):
     if request.method == 'POST':
-        full_name = request.POST['full_name']
-        initials = request.POST['initials']
+        first_name = request.POST['first_name'].strip()
+        last_name = request.POST['last_name'].strip()
+        patronymic = request.POST['patronymic'].strip()
+        initials = f'{last_name} {first_name[0]}.{patronymic[0]}.'
         gender = Gender.objects.get(id=request.POST['gender'])
-        shift = Smena.objects.get(id=request.POST['shift'])
-        position = Rank.objects.get(id=request.POST['position'])
+        smena = Smena.objects.get(id=request.POST['smena'])
+        rank = Rank.objects.get(id=request.POST['rank'])
         uchastok = Uchastok.objects.get(id=request.POST['uchastok'])
         work_phone = request.POST['work_phone']
         personal_phone = request.POST['personal_phone']
@@ -123,11 +128,13 @@ def register_employee(request):
         work_times = request.POST.getlist('work_times')
 
         employee = Employee.objects.create(
-            full_name=full_name,
-            initials=initials,
+            first_name=first_name,
+            last_name=last_name,
+            patronymic = patronymic,
+            initials = initials,
             gender=gender,
-            shift=shift,
-            position=position,
+            rank=rank,
+            smena=smena,
             uchastok=uchastok,
             work_phone=work_phone,
             personal_phone=personal_phone,
@@ -139,7 +146,7 @@ def register_employee(request):
             work_time = WorkTime.objects.get(id=work_time_id)
             employee.work_times.add(work_time)
 
-        return redirect('some_view')
+        return redirect('index')
 
     genders = Gender.objects.all()
     smenas = Smena.objects.all()
@@ -153,6 +160,8 @@ def register_employee(request):
         'uchastoks': uchastoks
     }
     return render(request, 'register_employee.html', context)
+
+
 
 def get_work_times(request):
     uchastok_id = request.GET.get('uchastok_id')

@@ -5,11 +5,34 @@ from django.conf import settings
 from core.models import (Employee, MetroStation, MetroTravelTime, 
                          MetroTransferTime, Request, Passenger, 
                          RequestReschedule, RequestCancellation,
-                         NoShow, PassengerCategory, RequestStatus)
+                         NoShow, PassengerCategory, RequestStatus,
+                         Gender, Uchastok, Smena,
+                         Rank, WorkTime
+                         )
 from datetime import datetime
 import pytz
 from collections import defaultdict
+import random
 
+def split_full_name(full_name):
+    """Киселева Н.В. -> Киселева Н В"""
+    # Разделяем строку по пробелам
+    name_parts = full_name.split()
+    try:
+        if len(name_parts) == 3:
+            last_name, first_name, patronymic = name_parts
+
+        elif len(name_parts) == 2:
+            last_name, first_name = name_parts
+            first_name, patronymic = first_name[0], first_name[2]
+        else:
+            raise ValueError("Не удалось разделить ФИО на части. Убедитесь, что введены фамилия, имя и отчество.")
+        return last_name, first_name, patronymic
+
+    except:
+        return '','',''
+
+    return last_name, first_name, patronymic
 class Command(BaseCommand):
     help = 'Load data from JSON file into the database'
 
@@ -34,27 +57,56 @@ class Command(BaseCommand):
                 continue
         raise ValueError(f"time data '{time_str}' does not match any known formats")
 
+
     def load_employees(self):
-        file_path = os.path.join(settings.BASE_DIR,'base_data',  'Сотрудники.json')
+        file_path = os.path.join(settings.BASE_DIR, 'base_data', 'Сотрудники.json')
         with open(file_path, 'r', encoding='utf-8') as file:
             data = json.load(file)
             for item in data:
+                # Получаем или создаем связанные записи
+                gender, _ = Gender.objects.get_or_create(name=item['SEX'])
+                uchastok, _ = Uchastok.objects.get_or_create(name=item['UCHASTOK'])
+                smena, _ = Smena.objects.get_or_create(name=item['SMENA'])
+                rank, _ = Rank.objects.get_or_create(name=item['RANK'])
+                last_name, first_name,patronymic = split_full_name(item['FIO'])
+                # Создаем или обновляем запись сотрудника
                 employee, created = Employee.objects.update_or_create(
-                    id = item['ID'],
-                    defaults={                        
-                        'date': datetime.strptime(item['DATE'], '%d.%m.%Y').date(),
-                        'time_work': item['TIME_WORK'],
-                        'fio': item['FIO'],
-                        'uchastok': item['UCHASTOK'],
-                        'smena': item['SMENA'],
-                        'rank': item['RANK'],
-                        'sex': item['SEX'][0],  # 'Мужской' -> 'М', 'Женский' -> 'Ж'
+                    id=item['ID'],
+                    defaults={
+                        'first_name': first_name.replace('.', ''),
+                        'last_name': last_name.replace('.', ''),
+                        'patronymic': patronymic.replace('.', ''),
+                        'initials': item['FIO'],
+                        'gender': gender,
+                        'smena': smena,
+                        'rank': rank,
+                        'work_phone': item.get('WORK_PHONE', ''),
+                        'personal_phone': item.get('PERSONAL_PHONE', ''),
+                        'uchastok': uchastok,
+                        'light_duty': item.get('LIGHT_DUTY', False)
                     }
                 )
+
+                # Удаляем все существующие рабочие времена сотрудника
+                employee.work_times.clear()
+
+                # Добавляем рабочие времена сотрудника
+                work_times_str = item['TIME_WORK'].split(',')
+                for work_time_str in work_times_str:
+                    start_time_str, end_time_str = work_time_str.split('-')
+                    start_time = datetime.strptime(start_time_str.strip(), '%H:%M').time()
+                    end_time = datetime.strptime(end_time_str.strip(), '%H:%M').time()
+                    work_time, _ = WorkTime.objects.get_or_create(
+                        uchastok=uchastok,
+                        start_time=start_time,
+                        end_time=end_time
+                    )
+                    employee.work_times.add(work_time)
+
                 if created:
-                    self.stdout.write(self.style.SUCCESS(f'Employee {employee.fio} created'))
+                    self.stdout.write(self.style.SUCCESS(f'Employee {employee.initials} created'))
                 else:
-                    self.stdout.write(self.style.SUCCESS(f'Employee {employee.fio} updated'))
+                    self.stdout.write(self.style.SUCCESS(f'Employee {employee.initials} updated'))
 
     def load_metro_stations(self):
         file_path = os.path.join(settings.BASE_DIR,'base_data', 'Наименование станций метро.json')
@@ -120,15 +172,14 @@ class Command(BaseCommand):
                 # passenger = Passenger.objects.get(id=item['id_pas']) 
                 # passenger = item['id_pas']
                 category, _ = PassengerCategory.objects.get_or_create(code=item['cat_pas'])
-
                 try:
                     passenger = Passenger.objects.get(id=item['id_pas'])
                 except Passenger.DoesNotExist:
                     passenger = Passenger.objects.create(
                         id=item['id_pas'],
-                        name="Тестовый Пассажир",
+                        name=f"Неизвестный пасажир {item['id_pas']}",
                         contact_phone="0000000000",
-                        gender="Не указан",
+                        gender_id=random.randint(1,2),
                         category=category,
                         additional_info="Тестовый пассажир создан автоматически",
                         has_eks=False
