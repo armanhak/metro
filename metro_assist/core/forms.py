@@ -10,7 +10,7 @@ class PassengerForm(forms.ModelForm):
             # 'contact_phone': forms.TextInput(attrs={'class': 'form-control'}),
             # 'additional_phone_info': forms.Textarea(attrs={'class': 'form-control'}),
             'gender': forms.Select(attrs={'class': 'form-control'}),
-            # 'smena': forms.Select(attrs={'class': 'form-control'}),
+            'category': forms.Select(attrs={'class': 'form-control'}),
             # 'uchastok': forms.Select(attrs={'class': 'form-control'}),
 
             # 'additional_info': forms.Textarea(attrs={'class': 'form-control'}),
