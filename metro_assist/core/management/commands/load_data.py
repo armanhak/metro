@@ -2,8 +2,8 @@ import json
 import os
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from core.models import (Employee, MetroStation, MetroTravelTime, 
-                         MetroTransferTime, Request, Passenger, 
+from core.models import (Employee, MetroStation, 
+                         Request, Passenger, 
                          RequestReschedule, RequestCancellation,
                          NoShow, PassengerCategory, RequestStatus,
                          Gender, Uchastok, Smena,
@@ -11,28 +11,23 @@ from core.models import (Employee, MetroStation, MetroTravelTime,
                          )
 from datetime import datetime
 import pytz
-from collections import defaultdict
 import random
 
 def split_full_name(full_name):
     """Киселева Н.В. -> Киселева Н В"""
-    # Разделяем строку по пробелам
     name_parts = full_name.split()
     try:
         if len(name_parts) == 3:
             last_name, first_name, patronymic = name_parts
-
         elif len(name_parts) == 2:
             last_name, first_name = name_parts
             first_name, patronymic = first_name[0], first_name[2]
         else:
             raise ValueError("Не удалось разделить ФИО на части. Убедитесь, что введены фамилия, имя и отчество.")
         return last_name, first_name, patronymic
-
     except:
         return '','',''
 
-    return last_name, first_name, patronymic
 class Command(BaseCommand):
     help = 'Load data from JSON file into the database'
 
@@ -108,62 +103,6 @@ class Command(BaseCommand):
                 else:
                     self.stdout.write(self.style.SUCCESS(f'Employee {employee.initials} updated'))
 
-    def load_metro_stations(self):
-        file_path = os.path.join(settings.BASE_DIR,'base_data', 'Наименование станций метро.json')
-        with open(file_path, 'r', encoding='utf-8') as file:
-            data = json.load(file)
-            for item in data:
-                station, created = MetroStation.objects.update_or_create(
-                    id= item['id'],
-                    defaults={
-                        'name_station': item['name_station'],
-                        'name_line': item['name_line'],
-                        'id_line': item['id_line']
-                    }
-                )
-                if created:
-                    self.stdout.write(self.style.SUCCESS(f'Metro station {station.name_station} created'))
-                else:
-                    self.stdout.write(self.style.SUCCESS(f'Metro station {station.name_station} updated'))
-
-    def load_metro_travel_times(self):
-        file_path = os.path.join(settings.BASE_DIR, 'base_data', 'Метро время между станциями.json')
-        with open(file_path, 'r', encoding='utf-8') as file:
-            data = json.load(file)
-            for item in data:
-                station1 = MetroStation.objects.get(id=item['id_st1'])
-                station2 = MetroStation.objects.get(id=item['id_st2'])
-                travel_time, created = MetroTravelTime.objects.update_or_create(
-                    id_st1=station1,
-                    id_st2=station2,
-                    defaults={
-                        'time': float(item['time'].replace(',', '.'))
-                    }
-                )
-                if created:
-                    self.stdout.write(self.style.SUCCESS(f'Travel time from {station1.name_station} to {station2.name_station} created'))
-                else:
-                    self.stdout.write(self.style.SUCCESS(f'Travel time from {station1.name_station} to {station2.name_station} updated'))
-
-    def load_metro_transfer_times(self):
-        file_path = os.path.join(settings.BASE_DIR, 'base_data', 'Метро время пересадки между станциями.json')
-        with open(file_path, 'r', encoding='utf-8') as file:
-            data = json.load(file)
-            for item in data:
-                station1 = MetroStation.objects.get(id=item['id1'])
-                station2 = MetroStation.objects.get(id=item['id2'])
-                transfer_time, created = MetroTransferTime.objects.update_or_create(
-                    id1=station1,
-                    id2=station2,
-                    defaults={
-                        'time': float(item['time'].replace(',', '.'))
-                    }
-                )
-                if created:
-                    self.stdout.write(self.style.SUCCESS(f'Transfer time from {station1.name_station} to {station2.name_station} created'))
-                else:
-                    self.stdout.write(self.style.SUCCESS(f'Transfer time from {station1.name_station} to {station2.name_station} updated'))
-
     def load_requests(self):
         file_path = os.path.join(settings.BASE_DIR, 'base_data', 'Заявки.json')
         with open(file_path, 'r', encoding='utf-8') as file:
@@ -234,8 +173,6 @@ class Command(BaseCommand):
                 except Exception as e:
                     self.stdout.write(self.style.SUCCESS(f'RequestReschedule {item["id_bid"]} dont add'))
 
-
-
     def load_request_cancellations(self):
         file_path = os.path.join(settings.BASE_DIR, 'base_data', 'Отмены заявок.json')
         with open(file_path, 'r', encoding='utf-8') as file:
@@ -273,9 +210,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         self.load_employees()
-        self.load_metro_stations()
-        self.load_metro_travel_times()
-        self.load_metro_transfer_times()
         self.load_requests()     
         self.load_request_reschedules()
         self.load_request_cancellations()
