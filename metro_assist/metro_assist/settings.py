@@ -93,12 +93,12 @@ WSGI_APPLICATION = 'metro_assist.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': os.environ.get("SQL_ENGINE", "django.db.backends.sqlite3"),
-        'NAME': os.environ.get("POSTGRES_DB", str(BASE_DIR / 'db.sqlite3')),
-        "USER": os.environ.get("POSTGRES_USER", "user"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "password"),
+        'ENGINE': os.environ.get("SQL_ENGINE", "django.db.backends.postgresql"),
+        'NAME': os.environ.get("POSTGRES_DB", 'postgres'),
+        "USER": os.environ.get("POSTGRES_USER", "django"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "django"),
         "HOST": os.environ.get("SQL_HOST", "localhost"),
-        "PORT": os.environ.get("SQL_PORT", "5432"),
+        "PORT": os.environ.get("SQL_PORT", "6543"),
     }
 }
 

@@ -12,6 +12,7 @@ from datetime import time
 from django.http import JsonResponse
 from .utils import MetroGraph, convert_seconds_to_hms
 import networkx as nx
+from datetime import datetime
 
 metro_graph = MetroGraph()
 
@@ -87,7 +88,6 @@ def register_request(request):
             method_of_request_id=method_of_request_id,
             additional_info=additional_info,
         )
-        print('start_save')
         new_request.save()
         return redirect('/')  # Замените 'success_url' на URL после успешного создания заявки
 
@@ -185,6 +185,11 @@ def calculate_time_over(request):
     print(travel_info)
     return JsonResponse(travel_info)
     # return JsonResponse({'time_over': travel_time})
+def del_req(request):
+    id_ = request.GET.get('id')
+    print('del', id_)
+    req = Request.objects.filter(id=id_).delete()
+    return render(request, 'index.html', {'requests': request})
 
 def get_travel_info(departure, arrival):
     global metro_graph

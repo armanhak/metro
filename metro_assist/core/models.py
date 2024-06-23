@@ -129,6 +129,13 @@ class Request(models.Model):
     method_of_request = models.ForeignKey(RequestMethod, null=True, blank=True, on_delete=models.SET_NULL)
     additional_info = models.TextField()
 
+    def delete(self, *args, **kwargs):
+        # Удаление связанных записей TimeMatrix
+        TimeMatrix.objects.filter(id1=self).delete()
+        TimeMatrix.objects.filter(id2=self).delete()
+        # Вызов метода delete модели
+        super().delete(*args, **kwargs)
+        
     def __str__(self):
         return f'Request {self.id} by {self.id_pas}'
 
@@ -157,4 +164,8 @@ class NoShow(models.Model):
 
     def __str__(self):
         return f"No Show {self.id_bid}"
-
+    
+class TimeMatrix(models.Model):
+    id1 = models.ForeignKey(Request, related_name='request_start', on_delete=models.CASCADE)
+    id2 = models.ForeignKey(Request, related_name='request_end', on_delete=models.CASCADE)
+    time = models.FloatField()  # Время в минутах    

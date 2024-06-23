@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 import os 
 import json
 from django.conf import settings
-
+from tqdm import tqdm
 from core.models import (PassengerCategory,
                          RequestStatus,
                          RequestMethod,
@@ -19,58 +19,64 @@ class Command(BaseCommand):
         file_path = os.path.join(settings.BASE_DIR,'base_data', 'Наименование станций метро.json')
         with open(file_path, 'r', encoding='utf-8') as file:
             data = json.load(file)
-            for item in data:
-                station, created = MetroStation.objects.update_or_create(
-                    id= item['id'],
-                    defaults={
-                        'name_station': item['name_station'],
-                        'name_line': item['name_line'],
-                        'id_line': item['id_line']
-                    }
-                )
-                if created:
-                    self.stdout.write(self.style.SUCCESS(f'Metro station {station.name_station} created'))
-                else:
-                    self.stdout.write(self.style.SUCCESS(f'Metro station {station.name_station} updated'))
+        print("Loading metro_stations...")
+        for item in tqdm(data):
+            station, created = MetroStation.objects.update_or_create(
+                id= item['id'],
+                defaults={
+                    'name_station': item['name_station'],
+                    'name_line': item['name_line'],
+                    'id_line': item['id_line']
+                }
+            )
+            # if created:
+            #     self.stdout.write(self.style.SUCCESS(f'Metro station {station.name_station} created'))
+            # else:
+            #     self.stdout.write(self.style.SUCCESS(f'Metro station {station.name_station} updated'))
+        self.stdout.write(self.style.SUCCESS(f'Metro stations created'))
 
     def load_metro_travel_times(self):
         file_path = os.path.join(settings.BASE_DIR, 'base_data', 'Метро время между станциями.json')
         with open(file_path, 'r', encoding='utf-8') as file:
             data = json.load(file)
-            for item in data:
-                station1 = MetroStation.objects.get(id=item['id_st1'])
-                station2 = MetroStation.objects.get(id=item['id_st2'])
-                travel_time, created = MetroTravelTime.objects.update_or_create(
-                    id_st1=station1,
-                    id_st2=station2,
-                    defaults={
-                        'time': float(item['time'].replace(',', '.'))
-                    }
-                )
-                if created:
-                    self.stdout.write(self.style.SUCCESS(f'Travel time from {station1.name_station} to {station2.name_station} created'))
-                else:
-                    self.stdout.write(self.style.SUCCESS(f'Travel time from {station1.name_station} to {station2.name_station} updated'))
+        print("Loading mero_travel_times...")
+        for item in tqdm(data):
+            station1 = MetroStation.objects.get(id=item['id_st1'])
+            station2 = MetroStation.objects.get(id=item['id_st2'])
+            travel_time, created = MetroTravelTime.objects.update_or_create(
+                id_st1=station1,
+                id_st2=station2,
+                defaults={
+                    'time': float(item['time'].replace(',', '.'))
+                }
+            )
+            # if created:
+            #     self.stdout.write(self.style.SUCCESS(f'Travel time from {station1.name_station} to {station2.name_station} created'))
+            # else:
+            #     self.stdout.write(self.style.SUCCESS(f'Travel time from {station1.name_station} to {station2.name_station} updated'))
+        self.stdout.write(self.style.SUCCESS(f'Travel times created'))
 
     def load_metro_transfer_times(self):
         file_path = os.path.join(settings.BASE_DIR, 'base_data', 'Метро время пересадки между станциями.json')
         with open(file_path, 'r', encoding='utf-8') as file:
             data = json.load(file)
-            for item in data:
-                station1 = MetroStation.objects.get(id=item['id1'])
-                station2 = MetroStation.objects.get(id=item['id2'])
-                transfer_time, created = MetroTransferTime.objects.update_or_create(
-                    id1=station1,
-                    id2=station2,
-                    defaults={
-                        'time': float(item['time'].replace(',', '.'))
-                    }
-                )
-                if created:
-                    self.stdout.write(self.style.SUCCESS(f'Transfer time from {station1.name_station} to {station2.name_station} created'))
-                else:
-                    self.stdout.write(self.style.SUCCESS(f'Transfer time from {station1.name_station} to {station2.name_station} updated'))
-    
+        print("Loading metro_transfer_times...")
+        for item in tqdm(data):
+            station1 = MetroStation.objects.get(id=item['id1'])
+            station2 = MetroStation.objects.get(id=item['id2'])
+            transfer_time, created = MetroTransferTime.objects.update_or_create(
+                id1=station1,
+                id2=station2,
+                defaults={
+                    'time': float(item['time'].replace(',', '.'))
+                }
+            )
+            # if created:
+            #     self.stdout.write(self.style.SUCCESS(f'Transfer time from {station1.name_station} to {station2.name_station} created'))
+            # else:
+            #     self.stdout.write(self.style.SUCCESS(f'Transfer time from {station1.name_station} to {station2.name_station} updated'))
+        self.stdout.write(self.style.SUCCESS(f'Transfer times created'))
+
     def load_passenger_categories(self):
         passenger_categories = [
             {"code": "ИЗТ", "description": "Инвалид по зрению (тотальный, сопровождение по метрополитену)"},
@@ -193,6 +199,7 @@ class Command(BaseCommand):
 
         self.load_passenger_categories()
         self.load_request_stauses()
+        self.load_request_methods()
         self.load_uchasotk()
         self.load_smens()
         self.load_ranks()
