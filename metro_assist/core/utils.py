@@ -26,6 +26,7 @@ def convert_seconds_to_min(total_seconds):
     # hours, remainder = divmod(total_seconds, 60)
     minutes, seconds = divmod(total_seconds, 60)
     return minutes+ seconds/100
+
 class MetroGraph():
     def __init__(self) -> None:
         self.create_graph()
@@ -86,6 +87,7 @@ class MetroGraph():
             return None, 0, None, None
         
     def get_travel_time(self, from_station, to_station, weight = 'weight' ):
+        """return seconds from first station to second station"""
 
         travel_time = nx.shortest_path_length(self.G,                                                  
                                                 source=from_station, 
@@ -234,3 +236,14 @@ def add_lunch(df):
                    right_on=['Сотрудник ID'],
                      how='left')#.to_excel('with_lunch.xlsx', index=False)
     return df
+
+class TaskManager:
+    def __init__(self, task_date) -> None:
+        # self.task_zero_date = task_date - timedelta(hours=12)
+        self.task_zero_date = datetime.strptime(task_date, "%Y-%m-%d") - timedelta(hours=12)
+        # print('task_zero_date', self.task_zero_date)
+
+    def to_minutes_since_noon_yesterday(self, dt):
+        """Время в минутах начиная с task_zero_date"""
+
+        return int((dt - self.task_zero_date).total_seconds() // 60)

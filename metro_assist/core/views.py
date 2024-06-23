@@ -13,7 +13,7 @@ from django.http import JsonResponse
 from .utils import MetroGraph, convert_seconds_to_hms
 import networkx as nx
 from datetime import datetime
-
+from django.utils import timezone
 metro_graph = MetroGraph()
 
 # ViewSet'ы для API
@@ -232,6 +232,7 @@ def get_travel_time(departure, arrival):
     except nx.NetworkXNoPath:
         # return 0
         return '00:00:00'
+    
     
 def request_distribution(request):
     if request.method == 'POST':
