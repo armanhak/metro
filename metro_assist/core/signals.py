@@ -4,20 +4,13 @@ from .models import Request, TimeMatrix
 import networkx as nx
 from datetime import datetime, timedelta
 from .views import metro_graph
-from .utils import TaskManager
+from .utils import TaskManager, make_aware_if_naive, time_to_seconds
 
-from django.utils import timezone
 
 # Функция для расчета времени между заявками
 def calculate_time_into_tasks(task1, task2, date=None):
     
     # Функция для проверки и приведения к "aware" datetime
-    def time_to_seconds(t):
-        return t.hour * 3600 + t.minute * 60 + t.second
-    def make_aware_if_naive(dt):
-        if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
-            return timezone.make_aware(dt, timezone.get_default_timezone())
-        return dt
     
     travel_time = metro_graph.get_travel_time(int(task1.id_st2_id), 
                                               int(task2.id_st1_id))
@@ -80,10 +73,6 @@ def update_time_matrix(sender, instance, created, **kwargs):
 
                 t12 = calculate_time_into_tasks(instance, request)
                 t21 = calculate_time_into_tasks(request, instance)
-                print(f'trav {instance.id_st2_id}-{request.id_st1_id}',
-                      t12, 
-                      f'{request.id_st2_id}-{instance.id_st1_id}',
-                      t21)
 
                 if t12!=60000:
                     TimeMatrix.objects.create(id1=instance, id2=request, time=t12)

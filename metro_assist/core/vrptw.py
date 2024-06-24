@@ -8,11 +8,12 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 import django
+from .utils import make_aware_if_naive, time_to_seconds, time_to_min
 
 # Установите переменную окружения DJANGO_SETTINGS_MODULE
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'metro_assist.settings')
 # Настройка Django
-django.setup()
+# django.setup()
 from core.utils import add_lunch
 
 def convert_decimal_minutes_to_seconds(decimal_minutes):
@@ -25,36 +26,38 @@ def convert_seconds_to_min(total_seconds):
     minutes, seconds = divmod(total_seconds, 60)
     return minutes+ seconds/100
 # @njit(parallel=True)
-def fill_time_matrix(time_matrix, task_index_items, tasks, get_travel_time, num_tasks):
-    task_cache = {task['id']: task for task in tasks}
 
-    for i in range(num_tasks):
-        task1_key, task1_value = task_index_items[i]
-        task1_id = task1_key.split("_")[0]
-        task1 = task_cache[task1_id]
-        time_matrix[0, task1_value] = 0  # Время от депо до задачи
-        time_matrix[task1_value, 0] = 0  # Время от задачи до депо
-        for j in range(num_tasks):
-            if i == j:
-                continue
-            task2_key, task2_value = task_index_items[j]
-            task2_id = task2_key.split("_")[0]
-            task2 = task_cache[task2_id]
-            travel_time = get_travel_time(int(task1['id_st2']), int(task2['id_st1']))
-            if task1['end'] + travel_time <= task2['start']-15:
-                time_matrix[task1_value, task2_value] = travel_time + task1['duration']
-            else:
-                time_matrix[task1_value, task2_value] = 1000
 
 
 class MetroVRPSolver:
-    def __init__(self, workers, tasks, G):
+    def __init__(self, task_date, 
+                 workers, 
+                 tasks, 
+                 task_time_matrix_dict,
+                 G, 
+                 task_sex = 'm', ):
+        self.task_date = datetime.strptime(task_date, '%Y-%m-%d').date()
+        self.task_zero_date = datetime.strptime(task_date, "%Y-%m-%d") - timedelta(hours=12)
+
+        self.task_sex = task_sex
         self.workers = workers
         self.tasks = tasks 
+        self.task_time_matrix_dict = task_time_matrix_dict
         self.G = G
         self.global_start_date = datetime.strptime('24.04.2024', "%d.%m.%Y") - timedelta(hours=12)
         self.load_data()
 
+
+    def to_sec_since_noon_yesterday(self, dt):
+        """Время в сеундах начиная с task_zero_date"""
+
+        return int((make_aware_if_naive(dt)  - make_aware_if_naive(self.task_zero_date)).total_seconds() // 60)
+        # return int((make_aware_if_naive(dt) - make_aware_if_naive(self.task_zero_date)).total_seconds())
+
+    def combine_date_time_to_sec_since_noon_yesterday(self, d, t):
+        combined_datetime = datetime.combine(d, t)
+        return int(((make_aware_if_naive(combined_datetime) - make_aware_if_naive(self.task_zero_date)).total_seconds())//60)
+    
     def load_data(self):
         self.create_task_index()
         self.create_time_matrix()
@@ -67,14 +70,37 @@ class MetroVRPSolver:
         hours, minutes, seconds = map(int, t.split(':'))
         total_minutes = int(round(hours * 60 + minutes + seconds / 60))
         return total_minutes
+    def str_time_to_sec(self, t):
+        hours, minutes, seconds = map(int, t.split(':'))
+        total_sec = hours * 60 + minutes + seconds
+        return total_sec
 
     def create_task_index(self):
         self.task_index = {}
         for task in self.tasks:
-            for i in range(int(task['INSP_SEX_M'])):
-                self.task_index[f"{task['id']}_M_{i+1}"] = len(self.task_index) + 1
-            for i in range(int(task['INSP_SEX_F'])):
-                self.task_index[f"{task['id']}_F_{i+1}"] = len(self.task_index) + 1
+            for i in range(int(task[f"insp_sex_{self.task_sex}"])):
+                self.task_index[f"{task['id']}_{self.task_sex}_{i+1}"] = len(self.task_index) + 1
+
+    def fill_time_matrix(self, task_index_items):
+        task_cache = {task['id']: task for task in self.tasks}
+
+        for i in range(self.num_tasks):
+            task1_key, task1_value = task_index_items[i]
+            task1_id = int(task1_key.split("_")[0])
+            task1 = task_cache[task1_id]
+            self.time_matrix[0, task1_value] = 0  # Время от депо до задачи
+            self.time_matrix[task1_value, 0] = 0  # Время от задачи до депо
+            for j in range(self.num_tasks):
+                if i == j:
+                    continue
+                task2_key, task2_value = task_index_items[j]
+                task2_id = int(task2_key.split("_")[0])
+                task2 = task_cache[task2_id]
+
+                time_from_task1_to_task2 = self.task_time_matrix_dict.get(f"{task1_id}-{task2_id}", 60000)
+                
+                self.time_matrix[task1_value, task2_value] = convert_seconds_to_min(time_from_task1_to_task2)
+
 
     def create_time_matrix(self):
         t = time.time()
@@ -83,23 +109,19 @@ class MetroVRPSolver:
         self.time_matrix = np.zeros((self.num_tasks + 1, self.num_tasks + 1), dtype=int)
 
         task_index_items = list(self.task_index.items())
-        fill_time_matrix(self.time_matrix, 
-                            task_index_items,
-                                self.tasks,
-                                self.get_travel_time, 
-                                self.num_tasks)
-        for i in self.time_matrix:
-            print(i)
+        self.fill_time_matrix(task_index_items)
 
         print('time_matr_time sec', time.time() - t)
     def create_data_model(self):
+        window_left = 15 #инспектор должен быть на месте за 15 мин
+        depo_open = 2880
         self.data = {
             'time_matrix': self.time_matrix,
-            'time_windows': [(0, 2880)] + [(task['start']-15, #инспектор должен быть на месте за 15 мин
-                                             task['end']) for task in self.tasks for _ in range(int(task['INSP_SEX_M']) + int(task['INSP_SEX_F']))],
+            'time_windows': [(0, depo_open)] + [(task['start'] - window_left, task['end']) for task in self.tasks
+                                                for _ in range(int(task[f'insp_sex_{self.task_sex}']))],
             'num_vehicles': len(self.workers),
             'depot': 0,
-            'task_durations': [0] + [task['duration'] for task in self.tasks for _ in range(int(task['INSP_SEX_M']) + int(task['INSP_SEX_F']))]
+            'task_durations': [0] + [task['end']-task['start'] for task in self.tasks for _ in range(int(task[f'insp_sex_{self.task_sex}']))]
         }
 
     def get_travel_time(self, from_station, to_station):
@@ -113,13 +135,19 @@ class MetroVRPSolver:
     def can_assign(self, worker_id, task_id):
         worker = self.workers[worker_id]
         task_key = list(self.task_index.keys())[list(self.task_index.values()).index(task_id)]
-        task_id = task_key.split("_")[0]
+        task_id = int(task_key.split("_")[0])
         task = next(task for task in self.tasks if task['id'] == task_id)
-        worker_start, worker_end = worker['start'], worker['end']
-        task_start, task_end = task['start'], task['end']
-        # worker_sex = worker['SEX']
-        # task_sex = task_key.split("_")[1]
-        return worker_start <= task_start-15 and worker_end >= task_end
+        # worker_start, worker_end = worker['start'], worker['end']
+        
+        worker_start = worker['start']
+        worker_end = worker['end']
+                               
+            # worker
+        task_start = task['start']
+        task_end = task['end']
+        min_ = 15
+        # print(worker_start,worker_end, task_start, task_end )
+        return worker_start <= task_start - min_ and worker_end >= task_end
 
     def process_vehicle(self, vehicle_id):
         # t =  time.time()
@@ -130,7 +158,7 @@ class MetroVRPSolver:
             node_index = self.manager.IndexToNode(index)
             if node_index != self.data['depot']:
                 taskid = list(self.task_index.keys())[list(self.task_index.values()).index(node_index)]
-                task = next(task for task in self.tasks if task['id'] == taskid.split("_")[0])
+                task = next(task for task in self.tasks if task['id'] == int(taskid.split("_")[0]))
                 completed_tasks += 1
 
                 # in_interval = self.workers[vehicle_id]["start"] <= task["start"] and self.workers[vehicle_id]["end"] >= task["end"]
@@ -139,15 +167,17 @@ class MetroVRPSolver:
                         self.workers[vehicle_id]["FIO"],
                         self.workers[vehicle_id]["SEX"],
                         int(taskid.split('_')[0]),
-                        int(self.workers[vehicle_id]["start"]),
-                        int(self.workers[vehicle_id]["end"]),
-                        int(task["start"]),
-                        int(task["end"]),
-                        int(task["end"])-int(task["start"]),
+
+                        self.workers[vehicle_id]["start"],
+                        self.workers[vehicle_id]['end'],
+                        task["datetime"].time(),
+                        # int(task["end"]),
+                        task['end'],#int
+                        task['end']-task['start'],
                         # in_interval,
-                        int(task["id_st1"]),
-                        int(task["id_st2"]),
-                        task['status']
+                        int(task["id_st1_id"]),
+                        int(task["id_st2_id"]),
+                        # task['status']
                         )
                 result.append(curr)
             index = self.solution.Value(self.routing.NextVar(index))
@@ -228,11 +258,8 @@ class MetroVRPSolver:
                                                'Продолжительность', 
                                                'Начальная станция', 
                                                  'Конечная станция',
-                                                 'status'
+                                                #  'status'
                                                  ])
-            # stat = r[['Сотрудник ID', 'Продолжительность']].groupby(['Сотрудник ID']).agg(['count', 'mean', 'sum', 'min', 'max'])
-            # stat.to_excel('stat.xlsx')
-            # r.to_excel('Расписание.xlsx', index=False)
             
             print(f'кол-во выполненных задач {completed_tasks_total}')
             return r
@@ -389,26 +416,27 @@ if __name__ == "__main__":
             tasks=tasksf,
             G = G
         )
-    # solver_male = MetroVRPSolver(
-    #         workers=workersm,
-    #         tasks=tasksm,
-    #         G=G
-    #     )
-    
+    solver_male = MetroVRPSolver(
+            workers=workersm,
+            tasks=tasksm,
+            G=G
+        )
+     
     print('end_prep time sec', (time.time()-prept))
     print('Начало распределения задач')
     st = time.time()
 
     with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(solver.run) for solver in [#solver_male, 
+        futures = [executor.submit(solver.run) for solver in [solver_male, 
                                                               solver_female]]
         results = [f.result() for f in as_completed(futures)]
 
     results = pd.concat(results, axis=0, ignore_index=True)
 
-    for col in ['Начало рабочего дня', 
+    for col in [
+                'Начало рабочего дня', 
                 'Конец рабочего дня', 
-                'Начальное время выполнения',
+                # 'Начальное время выполнения',
                 'Конечное время выполнения',
                 # 'Продолжительность'
                 ]:

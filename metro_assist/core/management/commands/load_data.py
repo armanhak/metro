@@ -7,7 +7,7 @@ from core.models import (Employee, MetroStation,
                          RequestReschedule, RequestCancellation,
                          NoShow, PassengerCategory, RequestStatus,
                          Gender, Uchastok, Smena,
-                         Rank, WorkTime
+                         Rank, WorkTime, EmployeeSchedule
                          )
 from datetime import datetime
 import pytz
@@ -66,6 +66,19 @@ class Command(BaseCommand):
             smena, _ = Smena.objects.get_or_create(name=item['SMENA'])
             rank, _ = Rank.objects.get_or_create(name=item['RANK'])
             last_name, first_name,patronymic = split_full_name(item['FIO'])
+
+
+            work_time_str = item['TIME_WORK']
+            start_time_str, end_time_str = work_time_str.split('-')
+            start_time = datetime.strptime(start_time_str.strip(), '%H:%M').time()
+            end_time = datetime.strptime(end_time_str.strip(), '%H:%M').time()
+            
+            work_time, _ = WorkTime.objects.get_or_create(
+                uchastok=uchastok,
+                start_time=start_time,
+                end_time=end_time
+            )
+
             # Создаем или обновляем запись сотрудника
             employee, created = Employee.objects.update_or_create(
                 id=item['ID'],
@@ -75,31 +88,38 @@ class Command(BaseCommand):
                     'patronymic': patronymic.replace('.', ''),
                     'initials': item['FIO'],
                     'gender': gender,
-                    'smena': smena,
+                    # 'smena': smena,
                     'rank': rank,
                     'work_phone': item.get('WORK_PHONE', ''),
                     'personal_phone': item.get('PERSONAL_PHONE', ''),
-                    'uchastok': uchastok,
+                    'work_time': work_time,
+                    # 'uchastok': uchastok,
                     'light_duty': item.get('LIGHT_DUTY', False)
                 }
             )
 
             # Удаляем все существующие рабочие времена сотрудника
-            employee.work_times.clear()
+            # employee.work_time.clear()
 
             # Добавляем рабочие времена сотрудника
-            work_times_str = item['TIME_WORK'].split(',')
-            for work_time_str in work_times_str:
-                start_time_str, end_time_str = work_time_str.split('-')
-                start_time = datetime.strptime(start_time_str.strip(), '%H:%M').time()
-                end_time = datetime.strptime(end_time_str.strip(), '%H:%M').time()
-                work_time, _ = WorkTime.objects.get_or_create(
-                    uchastok=uchastok,
-                    start_time=start_time,
-                    end_time=end_time
-                )
-                employee.work_times.add(work_time)
-
+            # work_times_str = item['TIME_WORK'].split(',')
+            # for work_time_str in work_times_str:
+            #     start_time_str, end_time_str = work_time_str.split('-')
+            #     start_time = datetime.strptime(start_time_str.strip(), '%H:%M').time()
+            #     end_time = datetime.strptime(end_time_str.strip(), '%H:%M').time()
+            #     work_time, _ = WorkTime.objects.get_or_create(
+            #         uchastok=uchastok,
+            #         start_time=start_time,
+            #         end_time=end_time
+            #     )
+                # employee.work_time.add(work_time)
+                        # Создание или обновление расписания сотрудника
+            start_work_date = datetime.strptime(item['DATE'], '%d.%m.%Y').date()
+            EmployeeSchedule.objects.update_or_create(
+                employee=employee,
+                start_work_date=start_work_date,
+                defaults={'smena': smena}
+            )
             # if created:
             #     self.stdout.write(self.style.SUCCESS(f'Employee {employee.initials} created'))
             # else:

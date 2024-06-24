@@ -4,16 +4,25 @@ from rest_framework import viewsets
 from .models import (Passenger, Request, Employee, 
                      MetroStation, RequestMethod, 
                      RequestStatus, PassengerCategory,
-                      Uchastok, Smena, Rank, WorkTime, Gender
+                      Uchastok, Smena, Rank, WorkTime, Gender,
+                     TimeMatrix, EmployeeSchedule
                      ) #WorkSchedule
 from .serializers import PassengerSerializer, RequestSerializer, EmployeeSerializer#, WorkScheduleSerializer
 from .forms import PassengerForm, RequestForm, EmployeeForm
 from datetime import time
 from django.http import JsonResponse
-from .utils import MetroGraph, convert_seconds_to_hms
+from .utils import (MetroGraph, convert_seconds_to_hms, 
+                    combine_date_time_to_min_since_noon_yesterday, 
+                    add_lunch, to_minutes_since_noon_yesterday,
+                      time_to_min)
 import networkx as nx
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.utils import timezone
+from django.db.models import Q
+from .vrptw import MetroVRPSolver, convert_to_time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import pandas as pd
+
 metro_graph = MetroGraph()
 
 # ViewSet'ы для API
@@ -233,8 +242,136 @@ def get_travel_time(departure, arrival):
         # return 0
         return '00:00:00'
     
-    
+
 def request_distribution(request):
+    exclude_statuses = ['Отмена', 'Отказ', 'Отмена заявки по просьбе пассажира', 
+                        'Отмена заявки по неявке пассажира',
+                        'Отказ по регламенту'
+                        ]
     if request.method == 'POST':
-        print(request.get('distribution_date'))
+        date_str = request.POST.get('distribution_date')
+        date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        task_zero_date_time = datetime.strptime(date_str, "%Y-%m-%d") - timedelta(hours=12)
+
+        previous_date = date - timedelta(days=1)
+        start_times_previous_day = [time(19, 0), time(20, 0)]
+
+        requests = Request.objects.filter(datetime__date=date).exclude(status__status__in=exclude_statuses)
+
+        employers_schedule = EmployeeSchedule.objects.filter(
+                            Q(start_work_date=date) |
+                            Q(start_work_date=previous_date, 
+                              employee__work_time__start_time__in=start_times_previous_day)
+                        )
+
+        # employees = [{"DATE":schedule.start_work_date, 
+        #               "start":schedule.employee.work_time.start_time,
+        #               "end": schedule.employee.work_time.end_time,
+        #               "ID": schedule.employee.id } for schedule in employers_schedule if schedule.start_work_date==previous_date]
+        # employees = [{"ID":e.id,"sex":e.gender.name, "FIO":e.initials} for e in employees]
+
+
+        def fetch_employers(qsschedule_set):
+            emp_list = [
+                {
+                    "ID": schedule.employee.id,
+                    "FIO": schedule.employee.initials,
+                    "SEX": schedule.employee.gender_id,
+                    "DATE": schedule.start_work_date,
+                    "start":schedule.employee.work_time.start_time,
+                    "end": schedule.employee.work_time.end_time,
+                    "smena":schedule.smena.name
+
+                }
+                for schedule in qsschedule_set]
+            for emp in emp_list:
+                emp['start'] = combine_date_time_to_min_since_noon_yesterday(task_zero_date_time, emp['DATE'], emp['start'])
+                if emp["DATE"]==date and emp['smena'] in ['1Н', '2Н']:
+                    emp['end'] = combine_date_time_to_min_since_noon_yesterday(task_zero_date_time, date + timedelta(days=1),  emp['end'])
+                else:
+                    emp['end'] = combine_date_time_to_min_since_noon_yesterday(task_zero_date_time, date,  emp['end'])
+
+                    
+            
+            return emp_list
+        def fetch_task(tasks):
+            for i in range(len(tasks)):
+                tasks[i]['start'] = to_minutes_since_noon_yesterday(task_zero_date_time , tasks[i]['datetime'])
+                tasks[i]['end'] = tasks[i]['start'] + time_to_min(tasks[i]['time_over'])
+                # print(tasks[i]['start'] )
+            return tasks
+        # Получение всех записей TimeMatrix, которые соответствуют полученным Request ID
+        employees_m = fetch_employers(employers_schedule.filter(employee__gender=1))
+        employees_f = fetch_employers(employers_schedule.filter(employee__gender=2))
+
+        tasksm = requests.filter(insp_sex_m__gt=0)
+        tasksf = requests.filter(insp_sex_f__gt=0)
+
+        task_m_ids = tasksm.values_list('id', flat=True)
+        task_f_ids = tasksf.values_list('id', flat=True)
+
+        timematrix_entries_m = TimeMatrix.objects.filter(id1__in=task_m_ids, id2__in=task_m_ids)
+        timematrix_entries_f = TimeMatrix.objects.filter(id1__in=task_f_ids, id2__in=task_f_ids)
+
+        # Преобразование TimeMatrix в нужный формат
+        task_time_matrix_m = {f'{entry.id1_id}-{entry.id2_id}': entry.time for entry in timematrix_entries_m}
+        task_time_matrix_f = {f'{entry.id1_id}-{entry.id2_id}': entry.time for entry in timematrix_entries_f}
+        tasksf = list(tasksf.values())
+        tasksf = fetch_task(tasksf)
+        
+        solver_female = MetroVRPSolver(
+                task_date=date_str,
+                workers=employees_f,
+                tasks=tasksf,
+                task_time_matrix_dict = task_time_matrix_f,
+                G = metro_graph.G,
+                task_sex='f'
+            )       
+
+        # solver_male = MetroVRPSolver(
+        #         task_date=date_str,
+        #         workers=employees_m,
+        #         tasks=tasksm,
+        #         task_time_matrix_dict = task_time_matrix_m,
+        #         G = metro_graph.G,
+        #         task_sex='m'
+        #     )
+        # # r = solver_female.run() 
+
+        with ThreadPoolExecutor() as executor:
+            futures = [executor.submit(solver.run) for solver in [#solver_male, 
+                                                                solver_female]]
+            results = [f.result() for f in as_completed(futures)]
+
+        results = pd.concat(results, axis=0, ignore_index=True)
+        for col in [
+                    'Начало рабочего дня', 
+                    'Конец рабочего дня', 
+                    # 'Начальное время выполнения',
+                    'Конечное время выполнения',
+                    # 'Продолжительность'
+                    ]:
+            results[col] = results[col].map(convert_to_time)
+
+        results = add_lunch(results)# добавим время обеда
+
+        stat = results[['Сотрудник', 'Продолжительность']].groupby(['Сотрудник']).agg(['count', 'mean', 'sum', 'min', 'max'])    
+        stat.to_excel('stat.xlsx')# Сохраним статистику по времени выполнению задач
+
+        results['Продолжительность']-=720 #12 часов, начало отсчета предыдущего дня
+        results['Продолжительность'] = results['Продолжительность'].map(convert_to_time)
+        results.to_excel('a.xlsx', index=False)
+        return JsonResponse({
+            'requests': tasksf[0],
+            # 'employee':employees_f[:10],
+            # 'task':list(solver_female.tasks.values())[0],
+            # 'task_index_f':solver_female.task_index,
+            # 'task_index_m':solver_male.task_index,
+            # 'time_matrix_f': solver_female.time_matrix.tolist()
+            # 'travel_times': travel_times,
+            # 'd': len(employers_schedule.values()),
+            # 'COUNT': len(employees),
+            # 'employers':employees
+        })
+
     return render(request, 'request_distribution.html')

@@ -89,17 +89,28 @@ class Employee(models.Model):
     patronymic = models.CharField(max_length=50)
     initials = models.CharField(max_length=50, blank=True)
     gender = models.ForeignKey(Gender, on_delete=models.CASCADE)
-    smena = models.ForeignKey(Smena, on_delete=models.CASCADE)
+    # smena = models.ForeignKey(Smena, on_delete=models.CASCADE)
     rank = models.ForeignKey(Rank, on_delete=models.CASCADE)
     work_phone = models.CharField(max_length=20)
     personal_phone = models.CharField(max_length=20)
-    uchastok = models.ForeignKey(Uchastok, on_delete=models.CASCADE)
-    work_times = models.ManyToManyField(WorkTime)
+    # uchastok = models.ForeignKey(Uchastok, on_delete=models.CASCADE)
+    work_time = models.ForeignKey(WorkTime, null=True, on_delete=models.SET_NULL)
+
+    # work_times = models.ManyToManyField(WorkTime)
     tab_number = models.CharField(max_length=50, null=True)
     light_duty = models.BooleanField(default=False)
 
     def __str__(self):
         return self.initials
+    
+class EmployeeSchedule(models.Model):
+    employee = models.ForeignKey('Employee', on_delete=models.CASCADE)
+    start_work_date = models.DateField()
+    smena = models.ForeignKey('Smena', on_delete=models.SET('-'))
+    uchastok = models.ForeignKey(Uchastok, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.employee.initials} - {self.start_work_date}"
     
 class RequestMethod(models.Model):
     method = models.CharField(max_length=25)
@@ -135,7 +146,7 @@ class Request(models.Model):
         TimeMatrix.objects.filter(id2=self).delete()
         # Вызов метода delete модели
         super().delete(*args, **kwargs)
-        
+
     def __str__(self):
         return f'Request {self.id} by {self.id_pas}'
 

@@ -3,6 +3,7 @@ from .models import MetroTravelTime, MetroTransferTime
 from itertools import combinations
 from datetime import datetime, timedelta
 import pandas as pd
+from django.utils import timezone
 
 def distribute_requests():
     # Основная логика распределения заявок
@@ -246,4 +247,22 @@ class TaskManager:
     def to_minutes_since_noon_yesterday(self, dt):
         """Время в минутах начиная с task_zero_date"""
 
-        return int((dt - self.task_zero_date).total_seconds() // 60)
+        # return int((dt - self.task_zero_date).total_seconds() // 60)
+        return (dt - self.task_zero_date).total_seconds()
+
+def to_minutes_since_noon_yesterday(task_zero_date, dt):
+    """Время в минутах начиная с task_zero_date"""
+
+    return int((make_aware_if_naive(dt) - make_aware_if_naive(task_zero_date)).total_seconds() // 60)
+    # return (dt - task_zero_date).total_seconds()
+def make_aware_if_naive(dt):
+    if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
+        return timezone.make_aware(dt, timezone.get_default_timezone())
+    return dt
+def time_to_seconds(t):
+    return t.hour * 3600 + t.minute * 60 + t.second
+def time_to_min(t):
+    return int(t.hour * 60 + t.minute + t.second/100)
+def combine_date_time_to_min_since_noon_yesterday(zero_datetime, d, t):
+    combined_datetime = datetime.combine(d, t)
+    return int(((make_aware_if_naive(combined_datetime) - make_aware_if_naive(zero_datetime)).total_seconds())//60)

@@ -125,9 +125,9 @@ class Command(BaseCommand):
             {'name': 'ЦУ-1', 'description': ''},
             {'name': 'ЦУ-2', 'description': ''},
             {'name': 'ЦУ-3', 'description': ''},
-            {'name': 'ЦУ-3(Н)', 'description': ''},
+            {'name': 'ЦУ-3 (Н)', 'description': ''},
             {'name': 'ЦУ-4', 'description': ''},
-            {'name': 'ЦУ-4(Н)', 'description': ''},
+            {'name': 'ЦУ-4 (Н)', 'description': ''},
             {'name': 'ЦУ-5', 'description': ''},
             {'name': 'ЦУ-8', 'description': ''},
         ]
@@ -138,8 +138,8 @@ class Command(BaseCommand):
         smenas = [
             {'name': '1', 'description': ''},
             {'name': '2', 'description': ''},
-            {'name': '1(Н)', 'description': ''},
-            {'name': '2(Н)', 'description': ''},
+            {'name': '1Н', 'description': ''},
+            {'name': '2Н', 'description': ''},
             {'name': '5', 'description': ''},
         ]
         for smena in smenas:
@@ -171,11 +171,11 @@ class Command(BaseCommand):
             {'uchastok_name': 'ЦУ-3', 'start_time': '07:00', 'end_time': '19:00'},
             {'uchastok_name': 'ЦУ-3', 'start_time': '08:00', 'end_time': '20:00'},
             {'uchastok_name': 'ЦУ-3', 'start_time': '10:00', 'end_time': '22:00'},
-            {'uchastok_name': 'ЦУ-3(Н)', 'start_time': '20:00', 'end_time': '08:00'},
+            {'uchastok_name': 'ЦУ-3 (Н)', 'start_time': '20:00', 'end_time': '08:00'},
             {'uchastok_name': 'ЦУ-4', 'start_time': '07:00', 'end_time': '19:00'},
             {'uchastok_name': 'ЦУ-4', 'start_time': '08:00', 'end_time': '20:00'},
             {'uchastok_name': 'ЦУ-4', 'start_time': '10:00', 'end_time': '22:00'},
-            {'uchastok_name': 'ЦУ-4(Н)', 'start_time': '20:00', 'end_time': '08:00'},
+            {'uchastok_name': 'ЦУ-4 (Н)', 'start_time': '20:00', 'end_time': '08:00'},
             {'uchastok_name': 'ЦУ-5', 'start_time': '07:00', 'end_time': '19:00'},
             {'uchastok_name': 'ЦУ-5', 'start_time': '08:00', 'end_time': '20:00'},
             {'uchastok_name': 'ЦУ-5', 'start_time': '10:00', 'end_time': '22:00'},
