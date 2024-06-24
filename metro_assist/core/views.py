@@ -137,7 +137,11 @@ def register_employee(request):
         personal_phone = request.POST['personal_phone']
         tab_number = request.POST['tab_number']
         light_duty = request.POST['light_duty']
-        work_times = request.POST.getlist('work_times')
+        work_time_id = request.POST['work_time']
+        start_work_date = request.POST['start_work_date']
+        # start_work_date = datetime.strptime(start_work_date, '%d.%m.%Y').date()
+
+        work_time = WorkTime.objects.get(id=work_time_id)
 
         employee = Employee.objects.create(
             first_name=first_name,
@@ -146,17 +150,23 @@ def register_employee(request):
             initials = initials,
             gender=gender,
             rank=rank,
-            smena=smena,
-            uchastok=uchastok,
+            work_time = work_time,
+            # smena=smena,
+            # uchastok=uchastok,
             work_phone=work_phone,
             personal_phone=personal_phone,
             tab_number=tab_number,
             light_duty=light_duty
         )
+        employe_scheld = EmployeeSchedule.objects.create(
+            start_work_date = start_work_date,
+            employee = employee,
+            smena = smena
+            )
 
-        for work_time_id in work_times:
-            work_time = WorkTime.objects.get(id=work_time_id)
-            employee.work_times.add(work_time)
+
+
+
 
         return redirect('index')
 
@@ -334,64 +344,72 @@ def request_distribution(request):
         task_time_matrix_f = {f'{entry.id1_id}-{entry.id2_id}': entry.time for entry in timematrix_entries_f}
         tasksf = fetch_task(list(tasksf.values()))
         tasksm = fetch_task(list(tasksm.values()))
+        try:     
+            solvers = [] 
+            if (len(tasksf)>0) & (len(employees_f)> 0):
+                solver_female = MetroVRPSolver(
+                        task_date=date_str,
+                        workers=employees_f,
+                        tasks=tasksf,
+                        task_time_matrix_dict = task_time_matrix_f,
+                        G = metro_graph.G,
+                        task_sex='f'
+                    )    
+                solvers.append(solver_female)   
 
+            if (len(tasksm)>0) & (len(employees_m)>0):
+
+                solver_male = MetroVRPSolver(
+                        task_date=date_str,
+                        workers=employees_m,
+                        tasks=tasksm,
+                        task_time_matrix_dict = task_time_matrix_m,
+                        G = metro_graph.G,
+                        task_sex='m'
+                    )
+                solvers.append(solver_male) 
         
-        solver_female = MetroVRPSolver(
-                task_date=date_str,
-                workers=employees_f,
-                tasks=tasksf,
-                task_time_matrix_dict = task_time_matrix_f,
-                G = metro_graph.G,
-                task_sex='f'
-            )       
+            with ThreadPoolExecutor() as executor:
+                futures = [executor.submit(solver.run) for solver in solvers]
+                results = [f.result() for f in as_completed(futures)]
 
-        solver_male = MetroVRPSolver(
-                task_date=date_str,
-                workers=employees_m,
-                tasks=tasksm,
-                task_time_matrix_dict = task_time_matrix_m,
-                G = metro_graph.G,
-                task_sex='m'
-            )
-        # # r = solver_female.run() 
+            results = pd.concat(results, axis=0, ignore_index=True)
+            for col in [
+                        'Начало рабочего дня', 
+                        'Конец рабочего дня', 
+                        'Начальное время выполнения',
+                        'Конечное время выполнения',
+                        # 'Продолжительность'
+                        ]:
+                results[col] = results[col].map(convert_to_time)
 
-        with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(solver.run) for solver in [solver_male, 
-                                                                solver_female]]
-            results = [f.result() for f in as_completed(futures)]
+            results = add_lunch(results)# добавим время обеда
 
-        results = pd.concat(results, axis=0, ignore_index=True)
-        for col in [
-                    'Начало рабочего дня', 
-                    'Конец рабочего дня', 
-                    'Начальное время выполнения',
-                    'Конечное время выполнения',
-                    # 'Продолжительность'
-                    ]:
-            results[col] = results[col].map(convert_to_time)
+            stat = results[['Сотрудник', 'Продолжительность']].groupby(['Сотрудник']).agg(['count', 'mean', 'sum', 'min', 'max'])    
+            stat.to_excel('stat.xlsx')# Сохраним статистику по времени выполнению задач
 
-        results = add_lunch(results)# добавим время обеда
+            results['Продолжительность']-=720 #12 часов, начало отсчета предыдущего дня
+            results['Продолжительность'] = results['Продолжительность'].map(convert_to_time)
 
-        stat = results[['Сотрудник', 'Продолжительность']].groupby(['Сотрудник']).agg(['count', 'mean', 'sum', 'min', 'max'])    
-        stat.to_excel('stat.xlsx')# Сохраним статистику по времени выполнению задач
+            for col in ['Начальная станция', 'Конечная станция']:
+                results[col] = results[col].replace(metro_id_name_dict)
+            # results.to_excel('a.xlsx', index=False)
+            file_path = generate_results_file(results)
+            
+            # Присваиваем путь к файлу в сессии, чтобы позже можно было его скачать
+            request.session['results_file_path'] = file_path
+            table_html = results.to_html(index=False, classes='table table-striped')
 
-        results['Продолжительность']-=720 #12 часов, начало отсчета предыдущего дня
-        results['Продолжительность'] = results['Продолжительность'].map(convert_to_time)
+            return render(request, 'request_distribution.html', {
+                'distribution_date': date_str,
+                'results_table': table_html, 
+                'message':''
+            })
+        except Exception as e:
+             return render(request, 'request_distribution.html', {
 
-        for col in ['Начальная станция', 'Конечная станция']:
-            results[col] = results[col].replace(metro_id_name_dict)
-        # results.to_excel('a.xlsx', index=False)
-        file_path = generate_results_file(results)
-        
-        # Присваиваем путь к файлу в сессии, чтобы позже можно было его скачать
-        request.session['results_file_path'] = file_path
-        table_html = results.to_html(index=False, classes='table table-striped')
-
-        return render(request, 'request_distribution.html', {
-            'distribution_date': date_str,
-            'results_table': table_html, 
-            'message':''
-        })
+                'message':f'Не удалось распределить {e}'
+            })           
 
     return render(request, 'request_distribution.html', {'message':''})
 

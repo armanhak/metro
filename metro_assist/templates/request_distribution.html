@@ -1,30 +1,34 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Распределение заявок</h1>
+    <h1>Распределение заявок</h1>
 
-<form method="post">
-    {% csrf_token %}
-    <div class="form-group mt-4">
-        <label for="distribution_date">Выберите дату для распределения заявок</label>
-        <input type="date" class="form-control" id="distribution_date" name="distribution_date" required>
-    </div>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group mt-4">
+            <label for="distribution_date">Выберите дату для распределения заявок</label>
+            <input type="date" class="form-control" id="distribution_date" value="{{ distribution_date }}" name="distribution_date" required>
+        </div>
 
-    <div class="btn-group mt-4">
-        <button type="submit" class="btn btn-primary" name="action" value="distribute">Распределить</button>
+        <div class="btn-group mt-4">
+            <button type="submit" class="btn btn-primary" name="action" value="distribute">Распределить</button>
+            
+
+        </div>
+        <p style="color:red">{{ message }}</p>
+    </form>
+{% endblock %}
+
+{% block content_request_list %}
+
+    {% if results_table %}
+        <h2>Результаты распределения</h2>
+        <a href="{% url 'download_results' %}" class="btn btn-success mt-4">Скачать результаты</a>
+        <div class="table-container">
+            {{ results_table|safe }}
+        </div>
         
 
-    </div>
-    <p style="color:red">{{ message }}</p>
-</form>
-
-{% if results_table %}
-<h2>Результаты распределения</h2>
-<div class="table-container">
-    {{ results_table|safe }}
-</div>
-<a href="{% url 'download_results' %}" class="btn btn-success mt-4">Скачать результаты</a>
-
-{% endif %}
+    {% endif %}
 
 {% endblock %}
