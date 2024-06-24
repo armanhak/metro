@@ -10,7 +10,7 @@ from .models import (Passenger, Request, Employee,
 from .serializers import PassengerSerializer, RequestSerializer, EmployeeSerializer#, WorkScheduleSerializer
 from .forms import PassengerForm, RequestForm, EmployeeForm
 from datetime import time
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from .utils import (MetroGraph, convert_seconds_to_hms, 
                     combine_date_time_to_min_since_noon_yesterday, 
                     add_lunch, to_minutes_since_noon_yesterday,
@@ -22,6 +22,9 @@ from django.db.models import Q
 from .vrptw import MetroVRPSolver, convert_to_time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
+import os
+from django.conf import settings
+
 
 metro_graph = MetroGraph()
 
@@ -371,8 +374,11 @@ def request_distribution(request):
 
         for col in ['Начальная станция', 'Конечная станция']:
             results[col] = results[col].replace(metro_id_name_dict)
-        results.to_excel('a.xlsx', index=False)
-
+        # results.to_excel('a.xlsx', index=False)
+        file_path = generate_results_file(results)
+        
+        # Присваиваем путь к файлу в сессии, чтобы позже можно было его скачать
+        request.session['results_file_path'] = file_path
         table_html = results.to_html(index=False, classes='table table-striped')
 
         return render(request, 'request_distribution.html', {
@@ -393,3 +399,17 @@ def request_distribution(request):
         })
 
     return render(request, 'request_distribution.html')
+
+def generate_results_file(results):
+    file_path = os.path.join(settings.BASE_DIR, 'results', 'Расписание.xlsx')
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    results.to_excel(file_path, index=False)
+    return file_path
+def download_results(request):
+    file_path = request.session.get('results_file_path')
+    if file_path and os.path.exists(file_path):
+        with open(file_path, 'rb') as file:
+            response = HttpResponse(file.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = f'attachment; filename={os.path.basename(file_path)}'
+            return response
+    return redirect('distribute_requests')

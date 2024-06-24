@@ -5,7 +5,7 @@
 
 <form method="post">
     {% csrf_token %}
-    <div class="form-group">
+    <div class="form-group mt-4">
         <label for="distribution_date">Выберите дату для распределения заявок</label>
         <input type="date" class="form-control" id="distribution_date" name="distribution_date" required>
     </div>
@@ -21,6 +21,8 @@
 <div class="table-container">
     {{ results_table|safe }}
 </div>
+<a href="{% url 'download_results' %}" class="btn btn-success mt-4">Скачать результаты</a>
+
 {% endif %}
 
 {% endblock %}
