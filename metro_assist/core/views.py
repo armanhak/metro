@@ -265,6 +265,8 @@ def request_distribution(request):
         start_times_previous_day = [time(19, 0), time(20, 0)]
 
         requests = Request.objects.filter(datetime__date=date).exclude(status__status__in=exclude_statuses)
+        if not requests.exists():
+            return render(request, 'request_distribution.html', {'message':f'Не нашлись заявки на {date_str}'})
 
         employers_schedule = EmployeeSchedule.objects.filter(
                             Q(start_work_date=date) |
@@ -383,22 +385,11 @@ def request_distribution(request):
 
         return render(request, 'request_distribution.html', {
             'distribution_date': date_str,
-            'results_table': table_html
-        })
-        return JsonResponse({
-            'requests': results.to_dict(orient='records'),
-            # 'employee':employees_f[:10],
-            # 'task':list(solver_female.tasks.values())[0],
-            # 'task_index_f':solver_female.task_index,
-            # 'task_index_m':solver_male.task_index,
-            # 'time_matrix_f': solver_female.time_matrix.tolist()
-            # 'travel_times': travel_times,
-            # 'd': len(employers_schedule.values()),
-            # 'COUNT': len(employees),
-            # 'employers':employees
+            'results_table': table_html, 
+            'message':''
         })
 
-    return render(request, 'request_distribution.html')
+    return render(request, 'request_distribution.html', {'message':''})
 
 def generate_results_file(results):
     file_path = os.path.join(settings.BASE_DIR, 'results', 'Расписание.xlsx')
