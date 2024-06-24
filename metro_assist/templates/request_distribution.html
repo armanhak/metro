@@ -15,4 +15,12 @@
         <button type="submit" class="btn btn-warning" name="action" value="adaptive">Адаптивное</button>
     </div>
 </form>
+
+{% if results_table %}
+<h2>Результаты распределения</h2>
+<div class="table-container">
+    {{ results_table|safe }}
+</div>
+{% endif %}
+
 {% endblock %}

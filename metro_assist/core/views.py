@@ -244,11 +244,16 @@ def get_travel_time(departure, arrival):
     
 
 def request_distribution(request):
+
     exclude_statuses = ['Отмена', 'Отказ', 'Отмена заявки по просьбе пассажира', 
                         'Отмена заявки по неявке пассажира',
                         'Отказ по регламенту'
                         ]
+    
     if request.method == 'POST':
+        metro_id_name_dict = MetroStation.objects.all().values('id', 'name_station')
+        metro_id_name_dict = {station['id']: station['name_station'] for station in metro_id_name_dict}
+
         date_str = request.POST.get('distribution_date')
         date = datetime.strptime(date_str, '%Y-%m-%d').date()
         task_zero_date_time = datetime.strptime(date_str, "%Y-%m-%d") - timedelta(hours=12)
@@ -276,14 +281,16 @@ def request_distribution(request):
                 {
                     "ID": schedule.employee.id,
                     "FIO": schedule.employee.initials,
-                    "SEX": schedule.employee.gender_id,
+                    "SEX": schedule.employee.gender.name,
                     "DATE": schedule.start_work_date,
                     "start":schedule.employee.work_time.start_time,
                     "end": schedule.employee.work_time.end_time,
                     "smena":schedule.smena.name
 
                 }
-                for schedule in qsschedule_set]
+                for schedule in qsschedule_set
+                ]
+            
             for emp in emp_list:
                 emp['start'] = combine_date_time_to_min_since_noon_yesterday(task_zero_date_time, emp['DATE'], emp['start'])
                 if emp["DATE"]==date and emp['smena'] in ['1Н', '2Н']:
@@ -291,9 +298,9 @@ def request_distribution(request):
                 else:
                     emp['end'] = combine_date_time_to_min_since_noon_yesterday(task_zero_date_time, date,  emp['end'])
 
-                    
             
             return emp_list
+        
         def fetch_task(tasks):
             for i in range(len(tasks)):
                 tasks[i]['start'] = to_minutes_since_noon_yesterday(task_zero_date_time , tasks[i]['datetime'])
@@ -316,8 +323,9 @@ def request_distribution(request):
         # Преобразование TimeMatrix в нужный формат
         task_time_matrix_m = {f'{entry.id1_id}-{entry.id2_id}': entry.time for entry in timematrix_entries_m}
         task_time_matrix_f = {f'{entry.id1_id}-{entry.id2_id}': entry.time for entry in timematrix_entries_f}
-        tasksf = list(tasksf.values())
-        tasksf = fetch_task(tasksf)
+        tasksf = fetch_task(list(tasksf.values()))
+        tasksm = fetch_task(list(tasksm.values()))
+
         
         solver_female = MetroVRPSolver(
                 task_date=date_str,
@@ -328,18 +336,18 @@ def request_distribution(request):
                 task_sex='f'
             )       
 
-        # solver_male = MetroVRPSolver(
-        #         task_date=date_str,
-        #         workers=employees_m,
-        #         tasks=tasksm,
-        #         task_time_matrix_dict = task_time_matrix_m,
-        #         G = metro_graph.G,
-        #         task_sex='m'
-        #     )
+        solver_male = MetroVRPSolver(
+                task_date=date_str,
+                workers=employees_m,
+                tasks=tasksm,
+                task_time_matrix_dict = task_time_matrix_m,
+                G = metro_graph.G,
+                task_sex='m'
+            )
         # # r = solver_female.run() 
 
         with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(solver.run) for solver in [#solver_male, 
+            futures = [executor.submit(solver.run) for solver in [solver_male, 
                                                                 solver_female]]
             results = [f.result() for f in as_completed(futures)]
 
@@ -347,7 +355,7 @@ def request_distribution(request):
         for col in [
                     'Начало рабочего дня', 
                     'Конец рабочего дня', 
-                    # 'Начальное время выполнения',
+                    'Начальное время выполнения',
                     'Конечное время выполнения',
                     # 'Продолжительность'
                     ]:
@@ -360,9 +368,19 @@ def request_distribution(request):
 
         results['Продолжительность']-=720 #12 часов, начало отсчета предыдущего дня
         results['Продолжительность'] = results['Продолжительность'].map(convert_to_time)
+
+        for col in ['Начальная станция', 'Конечная станция']:
+            results[col] = results[col].replace(metro_id_name_dict)
         results.to_excel('a.xlsx', index=False)
+
+        table_html = results.to_html(index=False, classes='table table-striped')
+
+        return render(request, 'request_distribution.html', {
+            'distribution_date': date_str,
+            'results_table': table_html
+        })
         return JsonResponse({
-            'requests': tasksf[0],
+            'requests': results.to_dict(orient='records'),
             # 'employee':employees_f[:10],
             # 'task':list(solver_female.tasks.values())[0],
             # 'task_index_f':solver_female.task_index,

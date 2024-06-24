@@ -163,14 +163,15 @@ class MetroVRPSolver:
 
                 # in_interval = self.workers[vehicle_id]["start"] <= task["start"] and self.workers[vehicle_id]["end"] >= task["end"]
                 curr = (
+                        int(taskid.split('_')[0]),
                         self.workers[vehicle_id]["ID"],
                         self.workers[vehicle_id]["FIO"],
                         self.workers[vehicle_id]["SEX"],
-                        int(taskid.split('_')[0]),
+                        
 
                         self.workers[vehicle_id]["start"],
                         self.workers[vehicle_id]['end'],
-                        task["datetime"].time(),
+                        task["start"]-15,
                         # int(task["end"]),
                         task['end'],#int
                         task['end']-task['start'],
@@ -250,7 +251,7 @@ class MetroVRPSolver:
                 result.extend(vehicle_result)
                 completed_tasks_total += completed_tasks
 
-            r = pd.DataFrame(result, columns=['Сотрудник ID','Сотрудник','Пол', 'Задача ID',
+            r = pd.DataFrame(result, columns=['Задача ID','Сотрудник ID','Сотрудник','Пол', 
                                                'Начало рабочего дня',
                                                'Конец рабочего дня', 
                                                'Начальное время выполнения', 

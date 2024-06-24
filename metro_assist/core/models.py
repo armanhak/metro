@@ -107,7 +107,7 @@ class EmployeeSchedule(models.Model):
     employee = models.ForeignKey('Employee', on_delete=models.CASCADE)
     start_work_date = models.DateField()
     smena = models.ForeignKey('Smena', on_delete=models.SET('-'))
-    uchastok = models.ForeignKey(Uchastok, on_delete=models.CASCADE)
+    # uchastok = models.ForeignKey(Uchastok, on_delete=models.CASCADE)
 
     def __str__(self):
         return f"{self.employee.initials} - {self.start_work_date}"
