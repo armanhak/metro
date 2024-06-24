@@ -273,6 +273,10 @@ def request_distribution(request):
                             Q(start_work_date=previous_date, 
                               employee__work_time__start_time__in=start_times_previous_day)
                         )
+        if not employers_schedule.exists():
+            return render(request, 'request_distribution.html', {'message':'Не нашлись сотрудники на эту дату'})
+
+
 
         # employees = [{"DATE":schedule.start_work_date, 
         #               "start":schedule.employee.work_time.start_time,
