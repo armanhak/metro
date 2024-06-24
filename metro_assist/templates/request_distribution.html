@@ -23,7 +23,8 @@
 
     {% if results_table %}
         <h2>Результаты распределения</h2>
-        <a href="{% url 'download_results' %}" class="btn btn-success mt-4">Скачать результаты</a>
+        <a href="{% url 'download_results' %}" class="btn btn-success mt-4">Скачать расписание</a>
+        <a href="{% url 'download_stat' %}" class="btn btn-success mt-4">Скачать статистику</a>
         <div class="table-container">
             {{ results_table|safe }}
         </div>

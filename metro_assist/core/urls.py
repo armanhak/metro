@@ -6,7 +6,7 @@ from .views import (PassengerViewSet, RequestViewSet,
                     request_distribution,
                     register_employee, index, calculate_time_over,
                     get_work_times,
-                    del_req, download_results
+                    del_req, download_results, download_stat
                     )
 
 router = DefaultRouter()
@@ -22,6 +22,8 @@ urlpatterns = [
     path('register_request/', register_request, name='register_request'),
     path('request_distribution/', request_distribution, name='request_distribution'),
     path('download_results/', download_results, name='download_results'),
+    path('download_stat/', download_stat, name='download_stat'),
+
 
     path('calculate_time_over/', calculate_time_over, name='calculate_time_over'),
     path('get_work_times/', get_work_times, name='get_work_times'),

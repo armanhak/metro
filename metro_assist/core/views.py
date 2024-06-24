@@ -385,8 +385,15 @@ def request_distribution(request):
 
             results = add_lunch(results)# добавим время обеда
 
-            stat = results[['Сотрудник', 'Продолжительность']].groupby(['Сотрудник']).agg(['count', 'mean', 'sum', 'min', 'max'])    
-            stat.to_excel('stat.xlsx')# Сохраним статистику по времени выполнению задач
+            stat = results[['Сотрудник', 'Пол', 'Продолжительность']].groupby(['Сотрудник', 'Пол'])\
+                [ 'Продолжительность'].agg(['count', 'mean', 'sum', 'min', 'max']).reset_index()
+            stat = stat.rename(columns = {'count': 'Кол-во заявок', 
+                                          'mean':'Средняя продолжительность времени на одну заявку (мин)',
+                                          'sum':"Суммарное время выполнения всех заявок (мин)",
+                                          'min':'Минимальное потраченное время на заявку (мин)',
+                                          'max':'Максимальное потраченное время на заявку (мин)',
+                                          })
+            stat.to_excel('stat.xlsx', index=False)# Сохраним статистику по времени выполнению задач
 
             results['Продолжительность']-=720 #12 часов, начало отсчета предыдущего дня
             results['Продолжительность'] = results['Продолжительность'].map(convert_to_time)
@@ -394,10 +401,12 @@ def request_distribution(request):
             for col in ['Начальная станция', 'Конечная станция']:
                 results[col] = results[col].replace(metro_id_name_dict)
             # results.to_excel('a.xlsx', index=False)
-            file_path = generate_results_file(results)
+            file_path = generate_results_file(results, 'results')
+            stat_path = generate_results_file(stat.reset_index(drop=True), 'stat')
             
             # Присваиваем путь к файлу в сессии, чтобы позже можно было его скачать
             request.session['results_file_path'] = file_path
+            request.session['stat_file_path'] = stat_path
             table_html = results.to_html(index=False, classes='table table-striped')
 
             return render(request, 'request_distribution.html', {
@@ -413,13 +422,21 @@ def request_distribution(request):
 
     return render(request, 'request_distribution.html', {'message':''})
 
-def generate_results_file(results):
-    file_path = os.path.join(settings.BASE_DIR, 'results', 'Расписание.xlsx')
+def generate_results_file(results, name):
+    file_path = os.path.join(settings.BASE_DIR, name, f'{name}.xlsx')
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     results.to_excel(file_path, index=False)
     return file_path
 def download_results(request):
     file_path = request.session.get('results_file_path')
+    if file_path and os.path.exists(file_path):
+        with open(file_path, 'rb') as file:
+            response = HttpResponse(file.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = f'attachment; filename={os.path.basename(file_path)}'
+            return response
+    return redirect('distribute_requests')
+def download_stat(request):
+    file_path = request.session.get('stat_file_path')
     if file_path and os.path.exists(file_path):
         with open(file_path, 'rb') as file:
             response = HttpResponse(file.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
