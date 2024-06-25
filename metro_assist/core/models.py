@@ -7,6 +7,9 @@ class PassengerCategory(models.Model):
     code = models.CharField(max_length=3, unique=True)
     description = models.CharField(max_length=255, null=True)
 
+    class Meta:
+        verbose_name = "Категории пассажиров"
+        verbose_name_plural = "Категории пассажиров"
     def __str__(self):
         return f"{self.code} - {self.description}"
 class Gender(models.Model):
@@ -23,7 +26,10 @@ class Passenger(models.Model):
     category = models.ForeignKey(PassengerCategory, on_delete=models.CASCADE)
     additional_info = models.TextField(null=True, blank=True)
     has_eks = models.BooleanField(default=False)
-
+    
+    class Meta:
+        verbose_name = "Пассажиры"
+        verbose_name_plural = "Пассажиры"
     def __str__(self):
         return self.name
 # Модель для станций метро
@@ -32,6 +38,9 @@ class MetroStation(models.Model):
     name_line = models.CharField(max_length=255)
     id_line = models.IntegerField()
 
+    class Meta:
+        verbose_name = "Станции метро"
+        verbose_name_plural = "Станции метро"
     def __str__(self):
         return self.name_station
 
@@ -40,6 +49,10 @@ class MetroTravelTime(models.Model):
     id_st1 = models.ForeignKey(MetroStation, related_name='start_station', on_delete=models.CASCADE)
     id_st2 = models.ForeignKey(MetroStation, related_name='end_station', on_delete=models.CASCADE)
     time = models.FloatField()  # Время в минутах
+
+    class Meta:
+        verbose_name = "Расстояния между станциями"
+        verbose_name_plural = "Расстояния между станциями"
 
     def __str__(self):
         return f"{self.id_st1} to {self.id_st2}"
@@ -50,6 +63,10 @@ class MetroTransferTime(models.Model):
     id2 = models.ForeignKey(MetroStation, related_name='transfer_end_station', on_delete=models.CASCADE)
     time = models.FloatField()  # Время в минутах
 
+    class Meta:
+        verbose_name = "Расстояния между пересадками"
+        verbose_name_plural = "Расстояния между пересадками"
+
     def __str__(self):
         return f"Transfer from {self.id1} to {self.id2}"
 
@@ -57,6 +74,10 @@ class Uchastok(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
 
+
+    class Meta:
+        verbose_name = "Участки"
+        verbose_name_plural = "Участки"
     def __str__(self):
         return self.name
     
@@ -65,11 +86,19 @@ class WorkTime(models.Model):
     start_time = models.TimeField()
     end_time = models.TimeField()
 
+    class Meta:
+        verbose_name = "Рабочие время"
+        verbose_name_plural = "Рабочие время" 
+
     def __str__(self):
         return f"{self.uchastok.name}: {self.start_time} - {self.end_time}"
 class Rank(models.Model):
     name = models.CharField(max_length=50)
     description = models.TextField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Должности"
+        verbose_name_plural = "Должности" 
 
     def __str__(self):
         return self.name
@@ -79,6 +108,9 @@ class Smena(models.Model):
     name = models.CharField(max_length=10)
     description = models.TextField(blank=True, null=True)
 
+    class Meta:
+        verbose_name = "Смены"
+        verbose_name_plural = "Смены" 
     def __str__(self):
         return self.name
 
@@ -100,6 +132,10 @@ class Employee(models.Model):
     tab_number = models.CharField(max_length=50, null=True)
     light_duty = models.BooleanField(default=False)
 
+    class Meta:
+        verbose_name = "Сотрудники"
+        verbose_name_plural = "Сотрудники" 
+
     def __str__(self):
         return self.initials
     
@@ -109,17 +145,27 @@ class EmployeeSchedule(models.Model):
     smena = models.ForeignKey('Smena', on_delete=models.SET('-'))
     # uchastok = models.ForeignKey(Uchastok, on_delete=models.CASCADE)
 
+    class Meta:
+        verbose_name = "Рассписание сотрудников"
+        verbose_name_plural = "Рассписание сотрудников" 
     def __str__(self):
         return f"{self.employee.initials} - {self.start_work_date}"
     
 class RequestMethod(models.Model):
     method = models.CharField(max_length=25)
 
+    class Meta:
+        verbose_name = "Методы получения заявок"
+        verbose_name_plural = "Методы получения заявок" 
+
     def __str__(self):
         return self.method
 class RequestStatus(models.Model):
     status = models.CharField(max_length=50)
 
+    class Meta:
+        verbose_name = "Статусы заявок"
+        verbose_name_plural = "Статусы заявок" 
     def __str__(self):
         return self.status
 class Request(models.Model):
@@ -140,6 +186,9 @@ class Request(models.Model):
     method_of_request = models.ForeignKey(RequestMethod, null=True, blank=True, on_delete=models.SET_NULL)
     additional_info = models.TextField()
 
+    class Meta:
+        verbose_name = "Заявки"
+        verbose_name_plural = "Заявки" 
     def delete(self, *args, **kwargs):
         # Удаление связанных записей TimeMatrix
         TimeMatrix.objects.filter(id1=self).delete()
@@ -155,6 +204,10 @@ class RequestCancellation(models.Model):
     id_bid = models.ForeignKey(Request, on_delete=models.CASCADE)
     date_time = models.DateTimeField()
 
+    class Meta:
+        verbose_name = "Отмененные аявки"
+        verbose_name_plural = "Отмененные аявки"
+
     def __str__(self):
         return f"Cancellation {self.id_bid}"
 
@@ -164,6 +217,7 @@ class RequestReschedule(models.Model):
     time_edit = models.DateTimeField()
     time_s = models.DateTimeField()
     time_f = models.DateTimeField()
+
 
     def __str__(self):
         return f"Reschedule {self.id_bid}"

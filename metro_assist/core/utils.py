@@ -133,7 +133,7 @@ def schedule_lunch(schedule, min_lunch_gap=0):
             end += timedelta(days=1)
         return start, end
     
-    def generate_lunch_intervals(lunch_start_min, lunch_end_max, step=30):
+    def generate_lunch_intervals(lunch_start_min, lunch_end_max, step=5):
         intervals = []
         current_start = lunch_start_min
         while current_start + timedelta(hours=1) <= lunch_end_max:

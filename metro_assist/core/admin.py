@@ -8,13 +8,13 @@ from .models import (Employee, Request,
                      Rank,EmployeeSchedule,
                      RequestMethod, RequestStatus,
                      MetroTravelTime, MetroTransferTime,
-                     MetroStation
+                     MetroStation, RequestCancellation
 
 
 
 )
 @admin.register(Employee)
-class UserProfileAdmin(admin.ModelAdmin):
+class EmployeeAdmin(admin.ModelAdmin):
     list_display = ('initials','work_time', 'work_phone', 'personal_phone')
 
     search_fields = ('initials', 'work_phone', 'personal_phone' )
@@ -26,68 +26,76 @@ class UserProfileAdmin(admin.ModelAdmin):
 
     )
 @admin.register(Passenger)
-class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('name','contact_phone', 'category')
+class PassengerAdmin(admin.ModelAdmin):
 
+    list_display = ('name','contact_phone', 'category')
+    list_filter  =('category__code',)
     search_fields = ('name','contact_phone' )
 
-    fieldsets = (
-        (None, {
-            'fields': ('name','contact_phone',  'category', 'additional_info')
-        }),
+    # fieldsets = (
+    #     (None, {
+    #         'fields': ('name','contact_phone',  'category', 'additional_info')
+    #     }),
 
-    )
+    # )
+
 
 @admin.register(Request)
-class UserProfileAdmin(admin.ModelAdmin):
+class RequestAdmin(admin.ModelAdmin):
     list_display = ('status','id_pas', 'cat_pas', 'datetime','time_over', 'insp_sex_m', 'insp_sex_f', 'id_st1', 'id_st2')
 
-    search_fields = ( 'id_pas', 'status')
+    search_fields = ( 'id_pas__name',)
 
     list_filter  =('status',)
 
 @admin.register(PassengerCategory)
-class UserProfileAdmin(admin.ModelAdmin):
+class PassengerCategoryAdmin(admin.ModelAdmin):
     pass
 
 @admin.register(Smena)
-class UserProfileAdmin(admin.ModelAdmin):
+class SmenaAdmin(admin.ModelAdmin):
     pass
 @admin.register(Uchastok)
-class UserProfileAdmin(admin.ModelAdmin):
+class UchastokAdmin(admin.ModelAdmin):
     pass
 @admin.register(WorkTime)
-class UserProfileAdmin(admin.ModelAdmin):
+class WorkTimeAdmin(admin.ModelAdmin):
     pass
 @admin.register(Rank)
-class UserProfileAdmin(admin.ModelAdmin):
+class RankAdmin(admin.ModelAdmin):
     pass
 
 @admin.register(EmployeeSchedule)
-class UserProfileAdmin(admin.ModelAdmin):
+class EmployeeScheduleAdmin(admin.ModelAdmin):
     list_display = ('employee','start_work_date', 'smena')
     search_fields = ('employee', )
     list_filter  = ('smena',)
 
 @admin.register(RequestMethod)
-class UserProfileAdmin(admin.ModelAdmin):
+class RequestMethodAdmin(admin.ModelAdmin):
     pass
 @admin.register(RequestStatus)
 class UserProfileAdmin(admin.ModelAdmin):
     pass
 
 @admin.register(MetroTravelTime)
-class UserProfileAdmin(admin.ModelAdmin):
+class MetroTravelTimeAdmin(admin.ModelAdmin):
     list_display = ('id_st1','id_st2', 'time')
     search_fields = ('id_st1__name_station','id_st2__name_station' )
 
 @admin.register(MetroTransferTime)
-class UserProfileAdmin(admin.ModelAdmin):
+class MetroTransferTimeAdmin(admin.ModelAdmin):
     list_display = ('id1','id2', 'time')
     search_fields = ('id1__name_station','id2__name_station' )
 
 @admin.register(MetroStation)
-class UserProfileAdmin(admin.ModelAdmin):
+class MetroStationAdmin(admin.ModelAdmin):
     list_display = ('name_station','name_line', 'id_line')
     search_fields = ('name_station', )
     list_filter  = ('name_line',)
+
+@admin.register(RequestCancellation)
+class RequestCancellationAdmin(admin.ModelAdmin):
+    list_display = ('date_time','id_bid')
+    pass
+    
