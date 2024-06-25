@@ -79,7 +79,7 @@ def update_time_matrix(sender, instance, created, **kwargs):
             if t12!=60000:
                 TimeMatrix.objects.update_or_create(id1=instance, id2=request, defaults={'time': t12})
             if t21!=60000:
-                TimeMatrix.objects.creupdate_or_createate(id1=request, id2=instance, defaults={'time': t21})
+                TimeMatrix.objects.update_or_createate(id1=request, id2=instance, defaults={'time': t21})
 
 @receiver(pre_delete, sender=Request)
 def delete_time_matrix(sender, instance, **kwargs):
