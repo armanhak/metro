@@ -56,8 +56,10 @@ def update_time_matrix(sender, instance, created, **kwargs):
                         'Отмена заявки по неявке пассажира',
                         'Отказ по регламенту'
                         ]
+    print(f"Сигнал сработал для Request ID: {instance.id}")
 
     if isinstance(instance.datetime, str):
+        
         date = datetime.strptime(instance.datetime, '%Y-%m-%dT%H:%M').date()
 
     else:
@@ -66,18 +68,18 @@ def update_time_matrix(sender, instance, created, **kwargs):
     task_manager = TaskManager(date)
     
     
-    if created:
-        requests = Request.objects.filter(datetime__date=date).exclude(status__status__in=exclude_statuses)
-        for request in requests:
-            if request != instance:
+    # if created:
+    requests = Request.objects.filter(datetime__date=date).exclude(status__status__in=exclude_statuses)
+    for request in requests:
+        if request != instance:
 
-                t12 = calculate_time_into_tasks(instance, request)
-                t21 = calculate_time_into_tasks(request, instance)
+            t12 = calculate_time_into_tasks(instance, request)
+            t21 = calculate_time_into_tasks(request, instance)
 
-                if t12!=60000:
-                    TimeMatrix.objects.create(id1=instance, id2=request, time=t12)
-                if t21!=60000:
-                    TimeMatrix.objects.create(id1=request, id2=instance, time=t21)
+            if t12!=60000:
+                TimeMatrix.objects.update_or_create(id1=instance, id2=request, defaults={'time': t12})
+            if t21!=60000:
+                TimeMatrix.objects.creupdate_or_createate(id1=request, id2=instance, defaults={'time': t21})
 
 @receiver(pre_delete, sender=Request)
 def delete_time_matrix(sender, instance, **kwargs):
