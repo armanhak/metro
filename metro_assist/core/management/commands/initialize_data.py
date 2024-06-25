@@ -12,6 +12,22 @@ from core.models import (PassengerCategory,
                          MetroTransferTime,
                          )
 
+from django.contrib.auth.models import User
+
+
+
+
+username = os.getenv('DJANGO_SUPERUSER_USERNAME', 'admin')
+email = os.getenv('DJANGO_SUPERUSER_EMAIL', 'admin@mail.ru')
+password = os.getenv('DJANGO_SUPERUSER_PASSWORD', 'admin')
+
+if not User.objects.filter(username=username).exists():
+    User.objects.create_superuser(username=username, email=email, password=password)
+    print("Superuser created.")
+else:
+    print("Superuser already exists.")
+
+
 class Command(BaseCommand):
     help = 'Initialize data for PassengerCategory, RequestStatus, and RequestMethod'
 
