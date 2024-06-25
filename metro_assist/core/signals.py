@@ -56,7 +56,7 @@ def update_time_matrix(sender, instance, created, **kwargs):
                         'Отмена заявки по неявке пассажира',
                         'Отказ по регламенту'
                         ]
-    print(f"Сигнал сработал для Request ID: {instance.id}")
+    # print(f"Сигнал сработал для Request ID: {instance.id}")
 
     if isinstance(instance.datetime, str):
         
