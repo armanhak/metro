@@ -420,7 +420,7 @@ def request_distribution(request):
                 'message':f'Не удалось распределить {e}'
             })           
 
-    return render(request, 'request_distribution.html', {'message':''})
+    return render(request, 'request_distribution.html', {'message':'', 'distribution_date':'2024-04-24'})
 
 def generate_results_file(results, name):
     file_path = os.path.join(settings.BASE_DIR, name, f'{name}.xlsx')
